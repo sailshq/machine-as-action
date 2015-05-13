@@ -40,6 +40,41 @@ $.get('/weather/getLatest', {
 
 
 
+
+## Passing file uploads to a machine
+
+You can use the special `files` option to map a file parameter containing an incoming Skipper upstream to a machine input:
+
+
+```js
+var asAction = require('machine-as-action');
+
+// WeatherController.js
+module.exports = {
+
+  uploadPhoto: require('machine-as-action')({
+    files: ['avatar']
+    machine: {
+      inputs: {
+        photo: {
+          example: '*',
+          required: true
+        }
+      },
+      exits: {success: {}},
+      fn: function (inputs, exits){
+        inputs.photo.upload(function (err, uploadedFiles){
+          if (err) return exits.error(err);
+          exits.success();
+        });
+      }
+    },
+  })
+
+};
+```
+
+
 ## License
 
 MIT &copy; Mike McNeil
