@@ -110,9 +110,9 @@ module.exports = function machineAsAction(opts) {
             return res.json(status, output);
           case 'view':
             if (_.isObject(output)) {
-              return res.json(view, output);
+              return res.view(view, output);
             }
-            return res.json(view);
+            return res.view(view);
           case 'redirect':
             if (!_.isString(output)) {
               return res.negotiate('Could not redirect to: '+output);
