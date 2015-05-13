@@ -44,19 +44,25 @@ $.get('/weather/getLatest', {
 So sending down data is great, but sometimes you need to render view templates, redirect to dynamic URLs, use a special status code, stream down a file, etc.  No problem.  You can customize the response from each exit using the `responses` option:
 
 ```js
-cityHome: require('machine-as-action')({
-  machine: {
-    exits: {success:{example: {}}},
-    fn: function(inputs,exits){return exits.success({stuff: 'things'});}
-  },
-  responses: {
-    success: {
-      responseType: 'view',
-      view: 'city-homepage'
-      // The view will be provided with a "local" called `stuff`
+var asAction = require('machine-as-action');
+
+// WeatherController.js
+module.exports = {
+
+  showHomepage: asAction({
+    machine: {
+      exits: {success:{example: {}}},
+      fn: function(inputs,exits){return exits.success({stuff: 'things'});}
+    },
+    responses: {
+      success: {
+        responseType: 'view',
+        view: 'homepage'
+        // The view will be provided with a "local" called `stuff`
+      }
     }
-  }
-}),
+  })
+};
 ```
 
 
@@ -89,7 +95,7 @@ var asAction = require('machine-as-action');
 // WeatherController.js
 module.exports = {
 
-  uploadPhoto: require('machine-as-action')({
+  uploadPhoto: asAction({
     files: ['avatar']
     machine: {
       inputs: {
