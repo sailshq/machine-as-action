@@ -34,20 +34,17 @@ module.exports = function machineAsAction(opts) {
     machineDef = opts.machine;
   }
 
-
   return function _requestHandler(req, res) {
 
     if (!req.allParams) {
-      throw new Error('Currently, `machine-as-action` requires `req.allParams()` to exist (i.e. a Sails.js app with the request hook enabled)');
+      throw new Error('`machine-as-action` requires `req.allParams()` to exist (i.e. a Sails.js app with the request hook enabled)');
     }
     if (!res.negotiate) {
-      throw new Error('Currently, `machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
+      throw new Error('`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
     }
     if (!res.json) {
-      throw new Error('Currently, `machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
-
-    // TODO: ....be smart about upstreams here....
 
     // Build machine, applying defaults
     var wetMachine = Machine.build(_.extend({
@@ -68,6 +65,17 @@ module.exports = function machineAsAction(opts) {
 
     // Build input configuration for machine using request parameters
     var inputConfiguration = _.extend({}, req.allParams());
+
+    // Handle `files` option (to provide access to upstreams)
+    if (_.isArray(opts.files)) {
+      if (!req.file) {
+        throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
+      }
+      _.each(opts.files, function (fileParamName){
+        inputConfiguration[fileParamName] = req.file(fileParamName);
+      });
+    }
+
     var liveMachine = wetMachine.configure(inputConfiguration);
     // Provide `env.req` and `env.res`
     liveMachine.setEnvironment({
@@ -80,12 +88,12 @@ module.exports = function machineAsAction(opts) {
         return res.negotiate(err);
       },
       success: function (result){
-        // TODO: handle other types of result data
-        // try {
-        // if (machineDef.exits.success.example === '*') {
-        //   // ...be smart about streams here...
-        // }
-        // catch (e){return res.negotiate(e);}
+
+        // TODO: allow specifying additional response mappings/metadata via `opts` (e.g. content type)
+
+        // TODO: Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
+
+        // TODO ...be smart about streams here...
 
         if (_.isUndefined(result)) {
           return res.send(200);
