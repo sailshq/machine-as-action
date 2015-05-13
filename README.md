@@ -39,9 +39,46 @@ $.get('/weather/getLatest', {
 
 
 
+## Customizing the response
+
+So sending down data is great, but sometimes you need to render view templates, redirect to dynamic URLs, use a special status code, stream down a file, etc.  No problem.  You can customize the response from each exit using the `responses` option:
+
+```js
+cityHome: require('machine-as-action')({
+  machine: {
+    exits: {success:{example: {}}},
+    fn: function(inputs,exits){return exits.success({stuff: 'things'});}
+  },
+  responses: {
+    success: {
+      responseType: 'view',
+      view: 'city-homepage'
+      // The view will be provided with a "local" called `stuff`
+    }
+  }
+}),
+```
 
 
-## Passing file uploads to a machine
+For each of your exits, you can optionally specify a `responseType`, `status`, and/or `view`.
+
+**responseType** is one of the following:
+ + status   (just status code, no response body, exit output will be ignored)
+ + json     (exit output will be send down as a JSON-formatted response body)
+ + view     (render and respond with a view; exit output will be provided as view locals)
+ + redirect (redirect to the URL returned as the exit output)
+ + error    (use `res.negotiate()` to send the appropriate default error response based on the exit output)
+
+**status** is the status code to respond with.
+
+**view** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view".
+ 
+If any of the above are not set explicitly, they will fall back to reasonable defaults.
+
+
+
+
+## File uploads
 
 You can use the special `files` option to map a file parameter containing an incoming Skipper upstream to a machine input:
 
