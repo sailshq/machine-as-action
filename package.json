@@ -1,0 +1,29 @@
+{
+  "name": "machine-as-action",
+  "version": "1.0.1",
+  "description": "Run a machine from an HTTP or WebSocket request.",
+  "scripts": {
+    "test": "node ./node_modules/mocha/bin/mocha"
+  },
+  "keywords": [
+    "machine",
+    "action",
+    "sails.js",
+    "blueprint",
+    "websocket",
+    "http"
+  ],
+  "author": "Mike McNeil",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^3.8.0",
+    "machine": "^6.0.1"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:treelinehq/machine-as-action.git"
+  }
+}
