@@ -56,10 +56,13 @@ module.exports = function machineAsAction(opts) {
   return function _requestHandler(req, res, next) {
 
     if (!req.allParams) {
-      throw new Error('Currently, `machine-as-action` requires `req.allParams()` to exist (i.e. a Sails app with the request hook enabled)');
+      throw new Error('Currently, `machine-as-action` requires `req.allParams()` to exist (i.e. a Sails.js app with the request hook enabled)');
     }
     if (!res.negotiate) {
-      throw new Error('Currently, `machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails app with the responses hook enabled)');
+      throw new Error('Currently, `machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
+    }
+    if (!res.json) {
+      throw new Error('Currently, `machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
 
     // Configure inputs using request parameters
