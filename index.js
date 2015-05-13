@@ -82,24 +82,50 @@ module.exports = function machineAsAction(opts) {
       req: req,
       res: res
     });
-    // Now run the machine, proxying exits to the response.
-    return liveMachine.exec({
-      error: function (err){
-        return res.negotiate(err);
-      },
-      success: function (result){
 
-        // TODO: allow specifying additional response mappings/metadata via `opts` (e.g. content type)
 
-        // TODO: Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
+    // Allow specifying additional response mappings/metadata via `opts`
+    // (e.g. status code, content type, etc)
+    opts.responses = opts.responses || {};
+
+    // Build up exit callbacks
+    var callbacks = {};
+    _.each(machineDef.exits, function (exitDef, exitName){
+      callbacks[exitName] = function (output){
+
+        // Configure response
+        var responseType = opts.responses[exitName].responseType || ((exitName === 'success') ? (_.isUndefined(output) ? 'status' : 'json') : 'error');
+        var status = opts.responses[exitName].status || ((exitName === 'success') ? 200 : 500);
+        var view = (responseType === 'view') ? opts.responses[exitName].view : undefined;
 
         // TODO ...be smart about streams here...
 
-        if (_.isUndefined(result)) {
-          return res.send(200);
+        // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
+        res.set('X-Exit', exitName);
+
+        switch (responseType) {
+          case 'status':
+            return res.send(status);
+          case 'json':
+            return res.json(status, output);
+          case 'view':
+            if (_.isObject(output)) {
+              return res.json(view, output);
+            }
+            return res.json(view);
+          case 'redirect':
+            if (!_.isString(output)) {
+              return res.negotiate('Could not redirect to: '+output);
+            }
+            return res.redirect(output, status);
+          case 'error':
+            return res.negotiate(output);
         }
-        return res.json(result);
-      }
+      };
     });
+
+    // Now run the machine, and attach our exit callbacks.
+    return liveMachine.exec(callbacks);
+
   };
 };
