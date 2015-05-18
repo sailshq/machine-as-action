@@ -167,5 +167,83 @@ testRoute('when no param val is specified for required input, should respond w/ 
     }
     return done();
   }
-  return done(new Error('Should have responded with a bad request error!'));
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
+
+
+
+
+
+
+
+
+
+
+
+testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi'
+      }
+    },
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+  params: {
+    x: {
+      foo: [[4]]
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
+
+
+
+
+
+
+
+testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi',
+        required: true
+      }
+    },
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+  params: {
+    x: [4, 3]
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    console.log(err);
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
 });
