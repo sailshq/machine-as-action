@@ -61,10 +61,10 @@ module.exports = function machineAsAction(opts) {
       throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
     if (!res.redirect) {
-      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('`machine-as-action` requires `res.redirect()` to exist (i.e. a Sails.js or Express app)');
     }
     if (!res.send) {
-      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('`machine-as-action` requires `res.send()` to exist (i.e. a Sails.js or Express app)');
     }
 
     // Sails.js app requirements
