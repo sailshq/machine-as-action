@@ -319,3 +319,35 @@ testRoute('customizing success exit to do a redirect should work', {
   }
   return done();
 });
+
+
+
+
+
+testRoute('customizing success exit to do JSON should work', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'json'
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.statusCode !== 200) {
+    return done(new Error('Should have responded with a 200 status code (instead got '+resp.statusCode+')'));
+  }
+  if (body !== 'http://google.com') {
+    return done(new Error('Should have sent the appropriate response body'));
+  }
+  return done();
+});
