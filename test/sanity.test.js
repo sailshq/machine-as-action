@@ -333,7 +333,7 @@ testRoute('customizing success exit to do JSON should work', {
       }
     },
     fn: function (inputs, exits) {
-      return exits.success('http://google.com');
+      return exits.success('some output value');
     }
   },
   responses: {
@@ -346,7 +346,7 @@ testRoute('customizing success exit to do JSON should work', {
   if (resp.statusCode !== 200) {
     return done(new Error('Should have responded with a 200 status code (instead got '+resp.statusCode+')'));
   }
-  if (body !== 'http://google.com') {
+  if (body !== 'some output value') {
     return done(new Error('Should have sent the appropriate response body'));
   }
   return done();
@@ -365,7 +365,7 @@ testRoute('exits other than success should default to status code 500', {
       whatever: {}
     },
     fn: function (inputs, exits) {
-      return exits.whatever('http://google.com');
+      return exits.whatever('some output value');
     }
   },
   responses: {
@@ -398,7 +398,7 @@ testRoute('exits other than success can have their status codes overriden too', 
       whatever: {}
     },
     fn: function (inputs, exits) {
-      return exits.whatever('http://google.com');
+      return exits.whatever('some output value');
     }
   },
   responses: {
@@ -438,7 +438,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
       whatever: {}
     },
     fn: function (inputs, exits) {
-      return exits.whatever('http://google.com');
+      return exits.whatever('some output value');
     }
   },
   responses: {
@@ -475,7 +475,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
       whatever: {}
     },
     fn: function (inputs, exits) {
-      return exits.success('http://google.com');
+      return exits.success('some output value');
     }
   },
   responses: {
@@ -493,3 +493,82 @@ testRoute('ceteris paribus, overriding status code should change response type i
   }
   return done(new Error('Should have responded with status code 503 (but instead got status code '+resp.statusCode+')'));
 });
+
+
+
+
+
+
+testRoute('`redirect` with custom status code', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {}
+    },
+    fn: function (inputs, exits) {
+      return exits.success('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      status: 301,
+      responseType: 'redirect'
+    },
+    whatever: {}
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.statusCode !== 301) {
+    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
+  }
+  if (resp.headers.location !== 'http://google.com') {
+    return done(new Error('Should have sent the appropriate "Location" response header'));
+  }
+  return done();
+});
+
+
+
+
+
+testRoute('`redirect` with custom status code', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.whatever('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+    },
+    whatever: {
+      status: 301,
+      responseType: 'redirect'
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.statusCode !== 301) {
+    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
+  }
+  if (resp.headers.location !== 'http://google.com') {
+    return done(new Error('Should have sent the appropriate "Location" response header'));
+  }
+  return done();
+});
+
+
+
+
+
