@@ -114,14 +114,14 @@ module.exports = function machineAsAction(opts) {
             // If there is no output, build an error message explaining what happened.
             return res.negotiate(!_.isUndefined(output) ? output : new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitName) ));
           case 'status':
-            return res.send(resMeta.statusCode);
+            return res.send(responses[exitName].statusCode);
           case 'json':
-            return res.json(resMeta.statusCode, output);
+            return res.json(responses[exitName].statusCode, output);
           case 'redirect':
-            return res.redirect(resMeta.statusCode, output);
+            return res.redirect(responses[exitName].statusCode, output);
           case 'view':
             res.statusCode = status;
-            return res.view(resMeta.viewPath, output);
+            return res.view(responses[exitName].viewPath, output);
           default:
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
