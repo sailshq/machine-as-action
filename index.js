@@ -2,6 +2,7 @@
  * Module dependencies
  */
 
+var util = require('util');
 var _ = require('lodash');
 var Machine = require('machine');
 
@@ -84,44 +85,37 @@ module.exports = function machineAsAction(opts) {
     });
 
 
-    // Allow specifying additional response mappings/metadata via `opts`
-    // (e.g. status code, content type, etc)
-    opts.responses = opts.responses || {};
-
     // Build up exit callbacks
     var callbacks = {};
     _.each(machineDef.exits, function (exitDef, exitName){
-      callbacks[exitName] = function (output){
 
-        // Configure response
-        var responseType = opts.responses[exitName].responseType || ((exitName === 'success') ? (_.isUndefined(output) ? 'status' : 'json') : 'error');
-        var status = opts.responses[exitName].status || ((exitName === 'success') ? 200 : 500);
-        var view = (responseType === 'view') ? opts.responses[exitName].view : undefined;
+      // Allow specifying additional response mappings/metadata via `opts`
+      // (e.g. status code, content type, etc)
+      var resMeta = normalizeResMeta(opts.responses || {}, exitDef, exitName);
 
-        // TODO ...be smart about streams here...
+      callbacks[exitName] = function uponResponse(output){
 
         // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
         res.set('X-Exit', exitName);
 
-        switch (responseType) {
-          case 'status':
-            return res.send(status);
-          case 'json':
-            return res.json(status, output);
-          case 'view':
-            if (_.isObject(output)) {
-              return res.view(view, output);
-            }
-            return res.view(view);
-          case 'redirect':
-            if (!_.isString(output)) {
-              return res.negotiate('Could not redirect to: '+output);
-            }
-            return res.redirect(output, status);
+        switch (resMeta.responseType) {
           case 'error':
+            // TODO: be smarter here- i.e. send back a prebuilt error
+            // not sure yet
             return res.negotiate(output);
+          case 'status':
+            return res.send(resMeta.statusCode);
+          case 'json':
+            return res.json(resMeta.statusCode, output);
+          case 'redirect':
+            return res.redirect(output, resMeta.statusCode);
+          case 'view':
+            return res.view(resMeta.viewPath, output);
+          default:
+            return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
       };
+
     });
 
     // Now run the machine, and attach our exit callbacks.
@@ -129,3 +123,87 @@ module.exports = function machineAsAction(opts) {
 
   };
 };
+
+
+
+
+/**
+ * Normalize response metadata.
+ *
+ * @param  {Object} configuredResponses
+ * @param  {Object} exitDef
+ * @param  {String} exitName
+ * @return {Object}          [normalized response metadata]
+ */
+function normalizeResMeta (configuredResponses, exitDef, exitName){
+
+  var resMeta = {};
+
+  // If response metadata was explicitly defined, use it.
+  // (also validate each property on the way in to ensure it is valid)
+  if ( _.isObject(configuredResponses[exitName]) ){
+    if (!_.isUndefined(configuredResponses[exitName].responseType)) {
+      resMeta.responseType = configuredResponses[exitName].responseType;
+      if (!_.contains(['error', 'status', 'json', 'redirect', 'view'], resMeta.responseType)) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', resMeta.responseType, exitName));
+      }
+    }
+    if (!_.isUndefined(configuredResponses[exitName].status)) {
+      resMeta.statusCode = +configuredResponses[exitName].status;
+      if (_.isNaN(resMeta.statusCode) || resMeta.statusCode < 100 || resMeta.statusCode > 599) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', resMeta.statusCode, exitName));
+      }
+    }
+    if (!_.isUndefined(configuredResponses[exitName].view)) {
+      resMeta.viewPath = configuredResponses[exitName].view;
+      if (!_.isString(resMeta.viewPath)) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view ("%s") specified for exit "%s".', resMeta.viewPath, exitName));
+      }
+    }
+  }
+
+
+  // Then set any remaining unspecified stuff to reasonable defaults.
+  // (note that this makes decisions about how to respond based on the
+  //  static exit definition, not the runtime output value.)
+
+  //  If this is the success exit, default to status code 200 and use
+  //  the exit example to determine whether to send back JSON data or
+  //  just a status code.
+  if (exitName === 'success') {
+    if (!resMeta.responseType) {
+      resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
+      if (exitDef.example === '~') {
+        // TODO ...be smart about streams here...
+        throw new Error('Stream type (`~`) is not yet supported!');
+      }
+    }
+    resMeta.statusCode = resMeta.statusCode || 200;
+  }
+  // If this is not the success exit, and there's no configuration otherwise, we'll assume
+  // this is some kind of error.
+  else {
+    resMeta.responseType = resMeta.responseType || 'error';
+    resMeta.statusCode = resMeta.statusCode || 500;
+  }
+
+  // Ensure response type is compatible with exit definition
+  if (resMeta.responseType === 'redirect') {
+    if (!_.isString(exitDef.example)) {
+      throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitName,util.inspect(exitDef.example, false, null)));
+    }
+  }
+  else if (resMeta.responseType === 'view') {
+    if (!_.isPlainObject(exitDef.example)) {
+      throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitName, util.inspect(exitDef.example, false, null)));
+    }
+  }
+  else if (resMeta.responseType === 'json') {
+    if (_.isUndefined(exitDef.example)) {
+      throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitName));
+    }
+  }
+  // TODO: log warnings if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
+
+  return resMeta;
+}
