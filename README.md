@@ -51,7 +51,13 @@ module.exports = {
 
   showHomepage: asAction({
     machine: {
-      exits: {success:{example: {}}},
+      exits: {
+        success:{
+          example: {
+            stuff: 'some string'
+          }
+        }
+      },
       fn: function(inputs,exits){return exits.success({stuff: 'things'});}
     },
     responses: {

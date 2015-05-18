@@ -111,9 +111,8 @@ module.exports = function machineAsAction(opts) {
 
         switch (responses[exitName].responseType) {
           case 'error':
-            // TODO: be smarter here- i.e. send back a prebuilt error
-            // not sure yet
-            return res.negotiate(output);
+            // If there is no output, build an error message explaining what happened.
+            return res.negotiate(!_.isUndefined(output) ? output : new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitName) ));
           case 'status':
             return res.send(resMeta.statusCode);
           case 'json':
