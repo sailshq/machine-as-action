@@ -35,6 +35,11 @@ module.exports = function testRoute(label, opts, testFn){
  */
 function sendRequest(app, opts, testResponseFn){
 
+  // Default to a reasonable method and path to simplify authoring
+  // when these things don't actually matter for the test at hand.
+  opts.method = opts.method || 'GET';
+  opts.path = opts.path || '/';
+
   app.router.flush((function (){
     var routes = {};
     routes[opts.method + ' ' + opts.path] = asAction({
@@ -47,7 +52,7 @@ function sendRequest(app, opts, testResponseFn){
   // Should now be able to hit route w/ an appropriate request
 
 
-  app.request(opts.method + ' ' + opts.path, {}, testResponseFn);
+  app.request(opts.method + ' ' + opts.path, opts.params||{}, testResponseFn);
 }
 
 
