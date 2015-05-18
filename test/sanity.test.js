@@ -351,3 +351,34 @@ testRoute('customizing success exit to do JSON should work', {
   }
   return done();
 });
+
+
+
+
+testRoute('exits other than success should default to status code 500', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {}
+    },
+    fn: function (inputs, exits) {
+      return exits.whatever('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'json'
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 500) {
+      return done(new Error('Should have responded with status code 500 (but instead got status code '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with status code 500 (but instead got status code 200)'));
+});
