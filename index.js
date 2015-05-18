@@ -56,14 +56,26 @@ module.exports = function machineAsAction(opts) {
 
   return function _requestHandler(req, res) {
 
+    // Vanilla Express app requirements
+    if (!res.json) {
+      throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
+    }
+    if (!res.redirect) {
+      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js or Express app)');
+    }
+    if (!res.send) {
+      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js or Express app)');
+    }
+
+    // Sails.js app requirements
     if (!req.allParams) {
       throw new Error('`machine-as-action` requires `req.allParams()` to exist (i.e. a Sails.js app with the request hook enabled)');
     }
     if (!res.negotiate) {
       throw new Error('`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
     }
-    if (!res.json) {
-      throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
+    if (!res.view) {
+      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js app with the views hook enabled)');
     }
 
     // Build input configuration for machine using request parameters
@@ -107,8 +119,9 @@ module.exports = function machineAsAction(opts) {
           case 'json':
             return res.json(resMeta.statusCode, output);
           case 'redirect':
-            return res.redirect(output, resMeta.statusCode);
+            return res.redirect(resMeta.statusCode, output);
           case 'view':
+            res.statusCode = status;
             return res.view(resMeta.viewPath, output);
           default:
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
@@ -152,24 +165,29 @@ function normalizeResMeta (configuredResponses, exits){
     // If response metadata was explicitly defined, use it.
     // (also validate each property on the way in to ensure it is valid)
     if ( _.isObject(configuredResponses[exitName]) ){
+      // Response type (`responseType`)
       if (!_.isUndefined(configuredResponses[exitName].responseType)) {
         resMeta.responseType = configuredResponses[exitName].responseType;
         if (!_.contains(['error', 'status', 'json', 'redirect', 'view'], resMeta.responseType)) {
           throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', resMeta.responseType, exitName));
         }
       }
+      // Status code (`status`)
       if (!_.isUndefined(configuredResponses[exitName].status)) {
         resMeta.statusCode = +configuredResponses[exitName].status;
         if (_.isNaN(resMeta.statusCode) || resMeta.statusCode < 100 || resMeta.statusCode > 599) {
           throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', resMeta.statusCode, exitName));
         }
       }
+      // View path (`view`)
       if (!_.isUndefined(configuredResponses[exitName].view)) {
         resMeta.viewPath = configuredResponses[exitName].view;
         if (!_.isString(resMeta.viewPath)) {
           throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view ("%s") specified for exit "%s".', resMeta.viewPath, exitName));
         }
       }
+      // Should not allow explicit/hard-coded output data override here-
+      // instead just send that hard-coded data out of the machine exit.
     }
 
 
@@ -177,9 +195,8 @@ function normalizeResMeta (configuredResponses, exits){
     // (note that this makes decisions about how to respond based on the
     //  static exit definition, not the runtime output value.)
 
-    //  If this is the success exit, default to status code 200 and use
-    //  the exit example to determine whether to send back JSON data or
-    //  just a status code.
+    //  If this is the success exit, use the exit example to determine whether
+    //  to send back JSON data or just a status code.
     if (exitName === 'success') {
       if (!resMeta.responseType) {
         resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
@@ -188,13 +205,23 @@ function normalizeResMeta (configuredResponses, exits){
           throw new Error('Stream type (`~`) is not yet supported!');
         }
       }
-      resMeta.statusCode = resMeta.statusCode || 200;
     }
     // If this is not the success exit, and there's no configuration otherwise, we'll assume
     // this is some kind of error.
     else {
       resMeta.responseType = resMeta.responseType || 'error';
+    }
+
+    // If status code was not explicitly specified, infer an appropriate code based on the response type.
+    // It'll either be `302` (redirect), `500` (error), or `200` (for everything else)
+    if (resMeta.responseType === 'redirect') {
+      resMeta.statusCode = resMeta.statusCode || 302;
+    }
+    else if (resMeta.responseType === 'error') {
       resMeta.statusCode = resMeta.statusCode || 500;
+    }
+    else {
+      resMeta.statusCode = resMeta.statusCode || 200;
     }
 
     // Ensure response type is compatible with exit definition
@@ -213,7 +240,11 @@ function normalizeResMeta (configuredResponses, exits){
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitName));
       }
     }
-    // TODO: log warnings if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
+
+    // Log warning if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
+    if (resMeta.viewPath && resMeta.responseType !== 'view') {
+      console.error('Warning: unnecessary `view` response metadata provided for an exit which is not configured to respond with a view (actual responseType => "%s").', resMeta.responseType);
+    }
 
     memo[exitName] = resMeta;
     return memo;
