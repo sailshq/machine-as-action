@@ -1,4 +1,5 @@
 var util = require('util');
+var _ = require('lodash');
 var testRoute = require('./helpers/test-route.helper');
 
 
@@ -239,11 +240,82 @@ testRoute('when param val of incorrect type is specified, should respond w/ bad 
   }
 }, function (err, resp, body, done){
   if (err) {
-    console.log(err);
     if (err.status !== 400) {
       return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
     }
     return done();
   }
   return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
+
+
+
+
+
+
+
+
+
+
+
+testRoute('customizing success exit to use a special status code in the response should work', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('STUFF AND THINGS');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'status',
+      status: 201
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.statusCode !== 201) {
+    return done(new Error('Should have responded with a 201 status code (instead got '+resp.statusCode+')'));
+  }
+  if (!_.isUndefined(body)) {
+    return done(new Error('Should not have sent a response body (but got '+body+')'));
+  }
+  return done();
+});
+
+
+
+
+
+
+testRoute('customizing success exit to do a redirect should work', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'redirect'
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.statusCode !== 302) {
+    return done(new Error('Should have responded with a 302 status code (instead got '+resp.statusCode+')'));
+  }
+  if (resp.headers.location !== 'http://google.com') {
+    return done(new Error('Should have sent the appropriate "Location" response header'));
+  }
+  return done();
 });
