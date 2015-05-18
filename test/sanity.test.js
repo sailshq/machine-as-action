@@ -464,34 +464,32 @@ testRoute('ceteris paribus, overriding status code should change response type i
 
 
 
-// To get this to pass, need to do some stuff in Sails core
-// (see TODO in index.js of this module for more information)
 
-// testRoute('ceteris paribus, overriding status code should change response type inference for default exit (i.e. status==503 sets unspecified response type to `error`)', {
-//   machine: {
-//     inputs: {},
-//     exits: {
-//       success: {
-//         example: 'some string'
-//       },
-//       whatever: {}
-//     },
-//     fn: function (inputs, exits) {
-//       return exits.success('http://google.com');
-//     }
-//   },
-//   responses: {
-//     success: {
-//       status: 503
-//     },
-//     whatever: {}
-//   }
-// }, function (err, resp, body, done){
-//   if (err) {
-//     if (err.status !== 503) {
-//       return done(new Error('Should have responded with status code 503-- instead got '+err.status));
-//     }
-//     return done();
-//   }
-//   return done(new Error('Should have responded with status code 503 (but instead got status code '+resp.statusCode+')'));
-// });
+testRoute('ceteris paribus, overriding status code should change response type inference for default exit (i.e. status==503 sets unspecified response type to `error`)', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {}
+    },
+    fn: function (inputs, exits) {
+      return exits.success('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      status: 503
+    },
+    whatever: {}
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 503) {
+      return done(new Error('Should have responded with status code 503-- instead got '+err.status));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with status code 503 (but instead got status code '+resp.statusCode+')'));
+});

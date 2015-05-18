@@ -200,18 +200,31 @@ function normalizeResMeta (configuredResponses, exits){
     // (note that this makes decisions about how to respond based on the
     //  static exit definition, not the runtime output value.)
 
+
+    // If `status` is explicitly set, but `responseType` is not, default it to either `status` or `json`.
+    // (See TODO below for more info)
+    if (!resMeta.responseType && resMeta.statusCode) {
+      resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
+      if (exitDef.example === '~') {
+        // TODO ...be smart about streams here...
+        throw new Error('Stream type (`~`) is not yet supported!');
+      }
+    }
+
+
     //  If this is the success exit, use the exit example to determine whether
     //  to send back JSON data or just a status code.
     if (exitName === 'success') {
       // That is, unless an explicitly-set status code tells us otherwise
-      if (!resMeta.responseType && resMeta.statusCode >= 400) {
+      // if (!resMeta.responseType && resMeta.statusCode >= 400) {
         // TODO: set response type to `error`
         // (right now, can't do this, because res.negotiate() will cause the
         //  status code to ALWAYS be set to 500-- which defeats the purpose.
         //  Once that is adjusted in Sails core and the relevant generators,
-        //  this can be uncommented.)
+        //  this can be uncommented.  For now, if `status` is set, this is no
+        //  longer responseType=error.  And maybe that's for the best anyway.)
         // resMeta.responseType = 'error';
-      }
+      // }
       if (!resMeta.responseType) {
         resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
         if (exitDef.example === '~') {
@@ -224,16 +237,17 @@ function normalizeResMeta (configuredResponses, exits){
     // this is some kind of error.
     else {
       // That is, unless an explicitly-set status code tells us otherwise
-      if (!resMeta.responseType && resMeta.statusCode < 400) {
-        resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-        if (exitDef.example === '~') {
-          // TODO ...be smart about streams here...
-          throw new Error('Stream type (`~`) is not yet supported!');
-        }
-      }
-      else {
+      // (...same deal as above here...)
+      // if (!resMeta.responseType && resMeta.statusCode < 400) {
+      //   resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
+      //   if (exitDef.example === '~') {
+      //     // TODO ...be smart about streams here...
+      //     throw new Error('Stream type (`~`) is not yet supported!');
+      //   }
+      // }
+      // else {
         resMeta.responseType = resMeta.responseType || 'error';
-      }
+      // }
     }
 
     // If status code was not explicitly specified, infer an appropriate code based on the response type.
