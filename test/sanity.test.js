@@ -382,3 +382,38 @@ testRoute('exits other than success should default to status code 500', {
   }
   return done(new Error('Should have responded with status code 500 (but instead got status code 200)'));
 });
+
+
+
+
+
+
+testRoute('exits other than success can have their status codes overriden too', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {}
+    },
+    fn: function (inputs, exits) {
+      return exits.whatever('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'json'
+    },
+    whatever: {
+      responseType: 'status',
+      status: 204
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) { console.log(err.status); return done(err); }
+  if (resp.statusCode !== 204) {
+    return done(new Error('Should have responded with status code 204 (but instead got status code '+resp.statusCode+')'));
+  }
+  return done();
+});
