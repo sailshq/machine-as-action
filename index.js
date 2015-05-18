@@ -126,7 +126,7 @@ module.exports = function machineAsAction(opts) {
           case 'redirect':
             return res.redirect(responses[exitName].statusCode, output);
           case 'view':
-            res.statusCode = status;
+            res.statusCode = responses[exitName].statusCode;
             return res.view(responses[exitName].viewPath, output);
           default:
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));

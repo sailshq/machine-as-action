@@ -5,7 +5,7 @@ var testRoute = require('./helpers/test-route.helper');
 
 
 
-testRoute('sanity check', {
+testRoute('sanity check (ridiculously simplistic usage should work)', {
   machine: {
     inputs: {},
     exits: {},
@@ -13,11 +13,6 @@ testRoute('sanity check', {
       return exits.success();
     }
   },
-  // files: [],
-  // responses: {}
-  // params: {}
-  // method: 'GET'
-  // path: '/'
 }, function (err, resp, body, done){
   if (err) return done(err);
   return done();
@@ -25,7 +20,35 @@ testRoute('sanity check', {
 
 
 
-testRoute('if exit def + compatible output example is specified, result should be sent as the response body', {
+
+
+
+testRoute('should be able to access `env.req` and `env.res`', {
+  method: 'POST',
+  path: '/something',
+  machine: {
+    inputs: {},
+    exits: {},
+    fn: function (inputs, exits, env) {
+      if (!env.req||!env.res||env.req.method !== 'POST') {
+        return exits.error();
+      }
+      env.res.set('x-test', 'itworked');
+      return exits.success();
+    }
+  },
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  if (resp.headers['x-test'] !== 'itworked') {
+    return done(new Error('Machine should have been able to set response header (`x-test`) to "itworked"!'));
+  }
+  return done();
+});
+
+
+
+
+testRoute('if exit def + compatible output example is specified, actual result should be sent as the response body (i.e. responseType==="json")', {
   machine: {
     inputs: {},
     exits: {
@@ -571,4 +594,69 @@ testRoute('`redirect` with custom status code', {
 
 
 
+//
+// Not implemented in core `sails.request()` yet
+//
+
+// testRoute('serving a `view` should work', {
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       success: {
+//         example: {}
+//       },
+//       whatever: {}
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.success();
+//     }
+//   },
+//   responses: {
+//     success: {
+//       responseType: 'view',
+//       view: 'homepage'
+//     },
+//     whatever: {}
+//   }
+// }, function (err, resp, body, done){
+//   if (err) return done(err);
+//   return done();
+// });
+
+
+// testRoute('`view` with custom status code', {
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       success: {
+//         example: {}
+//       },
+//       whatever: {}
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.success();
+//     }
+//   },
+//   responses: {
+//     success: {
+//       status: 205,
+//       responseType: 'view',
+//       view: 'homepage'
+//     },
+//     whatever: {}
+//   }
+// }, function (err, resp, body, done){
+//   if (err) return done(err);
+//   if (resp.statusCode !== 205) {
+//     return done(new Error('Should have responded with a 205 status code (instead got '+resp.statusCode+')'));
+//   }
+//   return done();
+// });
+
+
+
+
+//
+// Cannot test `files` here w/ `sails.request()`
+//
 
