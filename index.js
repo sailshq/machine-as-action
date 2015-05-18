@@ -79,7 +79,13 @@ module.exports = function machineAsAction(opts) {
     }
 
     // Build input configuration for machine using request parameters
-    var inputConfiguration = _.extend({}, req.allParams());
+    var inputConfiguration = _.reduce(wetMachine.inputs, function (memo, inputDef, inputName) {
+      var paramVal = req.param(inputName);
+      if (!_.isUndefined(paramVal)) {
+        memo[inputName] = paramVal;
+      }
+      return memo;
+    }, {});
 
     // Handle `files` option (to provide access to upstreams)
     if (_.isArray(opts.files)) {

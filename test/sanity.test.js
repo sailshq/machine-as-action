@@ -95,6 +95,77 @@ testRoute('ignore extra parameters', {
   }
 }, function (err, resp, body, done){
   if (err) return done(err);
-  if (body !== '') return done(new Error('should have gotten "" as the response body, but instead got: '+util.inspect(body)));
+  if (body !== undefined) {
+    // NOTE: this is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
+    return done(new Error('should have gotten `undefined` as the response body, but instead got: '+util.inspect(body)));
+  }
   return done();
+});
+
+
+
+
+
+
+
+testRoute('optional inputs should show up as `undefined` when parameter val is not provided', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi'
+      }
+    },
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      if (inputs.x !== undefined) return exits.error();
+      return exits.success();
+    }
+  },
+  params: {
+  }
+}, function (err, resp, body, done){
+  if (err) return done(err);
+  return done();
+});
+
+
+
+
+
+
+
+
+
+
+testRoute('when no param val is specified for required input, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi',
+        required: true
+      }
+    },
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+  params: {
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error!'));
 });
