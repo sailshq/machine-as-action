@@ -214,7 +214,17 @@ function normalizeResMeta (configuredResponses, exits){
     // If this is not the success exit, and there's no configuration otherwise, we'll assume
     // this is some kind of error.
     else {
-      resMeta.responseType = resMeta.responseType || 'error';
+      // That is, unless an explicitly-set status code tells us otherwise
+      if (!resMeta.responseType && resMeta.statusCode < 400) {
+        resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
+        if (exitDef.example === '~') {
+          // TODO ...be smart about streams here...
+          throw new Error('Stream type (`~`) is not yet supported!');
+        }
+      }
+      else {
+        resMeta.responseType = resMeta.responseType || 'error';
+      }
     }
 
     // If status code was not explicitly specified, infer an appropriate code based on the response type.

@@ -417,3 +417,44 @@ testRoute('exits other than success can have their status codes overriden too', 
   }
   return done();
 });
+
+
+
+
+
+
+
+
+
+
+
+testRoute('overriding status code should change response type inference (i.e. status==203 forces responseType: `error` to become `status` or `json`)', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      },
+      whatever: {}
+    },
+    fn: function (inputs, exits) {
+      return exits.whatever('http://google.com');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'json'
+    },
+    whatever: {
+      status: 204
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) {
+    return done(new Error('Should have responded with status code 204-- instead got '+err.status));
+  }
+  if (resp.statusCode !== 204) {
+    return done(new Error('Should have responded with status code 204 (but instead got status code '+resp.statusCode+')'));
+  }
+  return done();
+});
