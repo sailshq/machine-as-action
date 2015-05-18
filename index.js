@@ -203,6 +203,15 @@ function normalizeResMeta (configuredResponses, exits){
     //  If this is the success exit, use the exit example to determine whether
     //  to send back JSON data or just a status code.
     if (exitName === 'success') {
+      // That is, unless an explicitly-set status code tells us otherwise
+      if (!resMeta.responseType && resMeta.statusCode >= 400) {
+        // TODO: set response type to `error`
+        // (right now, can't do this, because res.negotiate() will cause the
+        //  status code to ALWAYS be set to 500-- which defeats the purpose.
+        //  Once that is adjusted in Sails core and the relevant generators,
+        //  this can be uncommented.)
+        // resMeta.responseType = 'error';
+      }
       if (!resMeta.responseType) {
         resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
         if (exitDef.example === '~') {
