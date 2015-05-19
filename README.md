@@ -102,7 +102,7 @@ var asAction = require('machine-as-action');
 module.exports = {
 
   uploadPhoto: asAction({
-    files: ['avatar']
+    files: ['photo']
     machine: {
       inputs: {
         photo: {
