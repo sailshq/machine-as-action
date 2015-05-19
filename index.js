@@ -108,7 +108,7 @@ module.exports = function machineAsAction(opts) {
 
     // Now build up some exit callbacks...
     var callbacks = {};
-    _.each(_.keys(machineDef.exits), function builtExitCallback(exitName){
+    _.each(_.keys(wetMachine.exits), function builtExitCallback(exitName){
 
       callbacks[exitName] = function respondApropos(output){
 
