@@ -80,7 +80,7 @@ module.exports = function machineAsAction(opts) {
 
     // Build input configuration for machine using request parameters
     var inputConfiguration = _.reduce(wetMachine.inputs, function (memo, inputDef, inputName) {
-      var paramVal = req.param(inputName);
+      var paramVal = req.param(inputName == '*' ? '0' : inputName);
       if (!_.isUndefined(paramVal)) {
         memo[inputName] = paramVal;
       }
