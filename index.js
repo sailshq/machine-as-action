@@ -205,10 +205,7 @@ function normalizeResMeta (configuredResponses, exits){
     // (See TODO below for more info)
     if (!resMeta.responseType && resMeta.statusCode) {
       resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-      if (exitDef.example === '~') {
-        // TODO ...be smart about streams here...
-        throw new Error('Stream type (`~`) is not yet supported!');
-      }
+      // TODO ...be smart about streams here...
     }
 
 
@@ -227,10 +224,7 @@ function normalizeResMeta (configuredResponses, exits){
       // }
       if (!resMeta.responseType) {
         resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-        if (exitDef.example === '~') {
-          // TODO ...be smart about streams here...
-          throw new Error('Stream type (`~`) is not yet supported!');
-        }
+        // TODO ...be smart about streams here...
       }
     }
     // If this is not the success exit, and there's no configuration otherwise, we'll assume
