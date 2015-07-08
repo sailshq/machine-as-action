@@ -99,12 +99,20 @@ module.exports = function machineAsAction(opts) {
 
     // Configure runtime parameter values as inputs
     var liveMachine = wetMachine.configure(inputConfiguration);
-
+    
     // Provide `env.req` and `env.res`
-    liveMachine.setEnvironment({
+    var env = {
       req: req,
       res: res
-    });
+    };
+  
+    // If this is a Sails app, provide `env.sails`.
+    if (req._sails) {
+      env.sails = req._sails;
+    }
+
+    // Set `env`
+    liveMachine.setEnvironment(env);
 
     // Now build up some exit callbacks...
     var callbacks = {};
