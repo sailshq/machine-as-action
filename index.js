@@ -60,9 +60,6 @@ module.exports = function machineAsAction(opts) {
     if (!res.json) {
       throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
-    if (!res.redirect) {
-      throw new Error('`machine-as-action` requires `res.redirect()` to exist (i.e. a Sails.js or Express app)');
-    }
     if (!res.send) {
       throw new Error('`machine-as-action` requires `res.send()` to exist (i.e. a Sails.js or Express app)');
     }
@@ -73,9 +70,6 @@ module.exports = function machineAsAction(opts) {
     }
     if (!res.negotiate) {
       throw new Error('`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
-    }
-    if (!res.view) {
-      throw new Error('`machine-as-action` requires `res.view()` to exist (i.e. a Sails.js app with the views hook enabled)');
     }
 
     // Build input configuration for machine using request parameters
@@ -99,13 +93,13 @@ module.exports = function machineAsAction(opts) {
 
     // Configure runtime parameter values as inputs
     var liveMachine = wetMachine.configure(inputConfiguration);
-    
+
     // Provide `env.req` and `env.res`
     var env = {
       req: req,
       res: res
     };
-  
+
     // If this is a Sails app, provide `env.sails`.
     if (req._sails) {
       env.sails = req._sails;
@@ -132,8 +126,18 @@ module.exports = function machineAsAction(opts) {
           case 'json':
             return res.json(responses[exitName].statusCode, output);
           case 'redirect':
+            // If `res.redirect()` is missing, we have to complain.
+            // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+            if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
+              throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
+            }
             return res.redirect(responses[exitName].statusCode, output);
           case 'view':
+            // If `res.view()` is missing, we have to complain.
+            // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+            if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
+              throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
+            }
             res.statusCode = responses[exitName].statusCode;
             return res.view(responses[exitName].viewPath, output);
           default:
