@@ -270,17 +270,17 @@ function normalizeResMeta (configuredResponses, exits){
 
     // Ensure response type is compatible with exit definition
     if (resMeta.responseType === 'redirect') {
-      if (!_.isString(exitDef.example)) {
+      if (!_.isUndefined(exitDef.example) && !_.isString(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitName,util.inspect(exitDef.example, false, null)));
       }
     }
     else if (resMeta.responseType === 'view') {
-      if (!_.isPlainObject(exitDef.example)) {
+      if (!_.isUndefined(exitDef.example) && !_.isPlainObject(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitName, util.inspect(exitDef.example, false, null)));
       }
     }
     else if (resMeta.responseType === 'json') {
-      if (_.isUndefined(exitDef.example)) {
+      if (!_.isUndefined(exitDef.example) && _.isUndefined(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitName));
       }
     }
