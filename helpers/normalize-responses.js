@@ -8,13 +8,16 @@ var _ = require('lodash');
 
 
 /**
- * Normalize response metadata.
+ * Merge the provided `responses` metadata with the exits from the machine definition,
+ * sanitize and validate the results, then return the normalized `responses` dictionary.
  *
- * @param  {Object} configuredResponses
- * @param  {Object} exits
- * @return {Object}      [normalized response metadata for each exit]
+ * @param  {Dictionary} configuredResponses
+ * @param  {Dictionary} exits
+ * @return {Dictionary}      [normalized response metadata for each exit]
+ *
+ * @throws {Error} If [machine-as-action doesn't know how to handle something.]
  */
-module.exports = function normalizeResMeta (configuredResponses, exits){
+module.exports = function normalizeResponses (configuredResponses, exits){
 
   // Note that we extend success and error exits here so that they will always exist
   // when this custom response metadata is being built. This only runs once when initially

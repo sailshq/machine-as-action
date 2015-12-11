@@ -5,7 +5,7 @@
 var util = require('util');
 var _ = require('lodash');
 var Machine = require('machine');
-
+var normalizeResponses = require('./helpers/normalize-responses');
 
 /**
  * machine-as-action
@@ -79,7 +79,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // them with the exit definitions of the machine to build a normalized response mapping that will
   // be cached so it does not need to be recomputed again and again at runtime with each incoming
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
-  var responses = normalizeResMeta(optsOrMachineDef.responses || {}, wetMachine.exits);
+  var responses = normalizeResponses(optsOrMachineDef.responses || {}, wetMachine.exits);
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
   // for `optsOrMachineDef.responses`, it will be irreversibly modified.
 
