@@ -32,6 +32,9 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       value is a dictionary of settings.
  *                       TODO: document settings
  *
+ *           @optional {Array} files
+ *
+ *
  * -OR-
  *
  *
@@ -162,22 +165,43 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Build input configuration for machine using request parameters
-    var inputConfiguration = _.reduce(wetMachine.inputs, function (memo, inputDef, inputName) {
-      var paramVal = req.param(inputName == '*' ? '0' : inputName);
-      if (!_.isUndefined(paramVal)) {
-        memo[inputName] = paramVal;
+    // Build `argins` (aka input configurations), a dictionary that maps each input's codeName to the
+    // appropriate argument.
+    var argins = _.reduce(wetMachine.inputs, function (memo, inputDef, inputCodeName) {
+
+      // If this input is named "*", we understand that this is indicating it's special; that it represents
+      // a special, agressive kind of match group that sometimes appears in URL patterns.  This special match group
+      // is known as a "wildcard suffix".
+      if (inputCodeName === '*') {
+        memo[inputCodeName] = req.param('0');
       }
+      // Otherwise, this is just your standard, run of the mill input.
+      else {
+        memo[inputCodeName] = req.param(inputCodeName);
+      }
+
+      // ---
+      // Note: formerly, we omitted `undefined` values from this dictionary.
+      // This doesn't seem to be necessary, so I removed it.  But leaving a note
+      // here in case we're freaking out later trying to figure out why the world
+      // is falling apart.    ~mm dec11,2015
+      // ```
+      // if (!_.isUndefined(paramVal)) { memo[inputCodeName] = paramVal; } return memo;
+      // ```
+      // ---
+
       return memo;
     }, {});
 
+
+
     // Handle `files` option (to provide access to upstreams)
-    if (_.isArray(opts.files)) {
+    if (_.isArray(optsOrMachineDef.files)) {
       if (!req.file) {
         throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
       }
-      _.each(opts.files, function (fileParamName){
-        inputConfiguration[fileParamName] = req.file(fileParamName);
+      _.each(optsOrMachineDef.files, function (fileParamName){
+        argins[fileParamName] = req.file(fileParamName);
       });
     }
 
@@ -185,8 +209,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //       (mapping as closely as possible to Swagger's syntax -- not just for familiarity, but
     //        also to maintain and strengthen the underlying conventions)
 
-    // Specify runtime parameter values as inputs
-    var liveMachine = wetMachine.configure(inputConfiguration);
+
+    // Pass argins to the machine.
+    var liveMachine = wetMachine.configure(argins);
 
 
     // Build and set `env`
