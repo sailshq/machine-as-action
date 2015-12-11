@@ -36,6 +36,22 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       TODO: document settings
  *
  *           @optional {Array} files
+ *                     An array of input ids identifying inputs which expect to
+ *                     receive file uploads instead of text parameters. These file inputs
+ *                     must have `example: '==='`, but they needn't necessarily be
+ *                     `required`.
+ *
+ *                      **************************************************************
+ *                      TODO: bind a `.on('error')` handler for each upstream as it's
+ *                      created so it doesn't have to be done in userland code in the
+ *                      machine fn (which is a no go).  If the `on('error')` fires,
+ *                      do nothing.
+ *                      ************************************************************
+ *
+ *           @optional {String} urlWildcardSuffix
+ *                     if '', then there is no wildcard suffix.  Otherwise, this is the
+ *                     c-input id of the machine input which is being referenced by the
+ *                     pattern variable serving as the wildcard suffix.
  *
  *
  * -OR-
