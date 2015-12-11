@@ -132,13 +132,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //       ° The querystring (e.g. `?foo=some%20string`)
     //       ° The request body (may be URL-encoded or JSON-serialized)
     //
-    //  (2) FILE PARAMETERS:
+    //  (2) FILES:
     //      Incoming upstreams (event streams of multipart file upload streams) via Skipper.
     //      Any receiving input(s) may continue to be either required or optional, but they must
     //      declare themselves `example: '==='`.
     //
-    //  (3) REQUEST HEADERS:
-    //      Request headers may be provided
+    //  (3) HEADERS:
+    //      HTTP request headers of any kind.
+    //      Any receiving input(s) may continue to be either required or optional, but they must
+    //      declare a string example.
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -190,20 +192,63 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // Just like a machine's `fn` _must_ call one of its exits, this action _must_ send a response.
     // But it can do so in a number of different ways:
     //
-    //  (1) NO BODY:    do not send a response body (i.e. send status code + headers only)
+    //  (1) ACK:           Do not send a response body.
+    //                     - Useful in situations where response data is unnecessary/wasteful,
+    //                       e.g. after successfully updating a resource like `PUT /discoparty/7`.
+    //                     - The status code and any response headers will still be sent.
+    //                     - Even if the machine exit returns any output, it will be ignored.
     //
-    //  (2) PLAIN TEXT: send response body as plain text
     //
-    //  (3) JSON:       encode the response body as a JSON string before sending
+    //  (2) PLAIN TEXT:    Send plain text.
+    //                     - Useful for sending raw data in a format like CSV or XML.
+    //                     - The *STRING* output from the machine exit will be sent verbatim as the
+    //                       response body. Custom response headers like "Content-Type" can be sent
+    //                       using `env.res.set()` or mp-headers.  For more info, see "FILE" below.
+    //                     - If the exit does not guarantee a *STRING* output, then `machine-as-action`
+    //                       will refuse to rig this machine.
     //
-    //  (4) FILE:       download a file (pipe a binary stream to the response)
-    //                  Note that any response headers you might need like `content-type` and
-    //                  `content-disposition` should be set in the implementation of your machine
-    //                  using `env.res.set()`. For advanced documentation on `res.set()`, check out
-    //                  the Sails.js docs:
-    //                     ° http://sailsjs.org/documentation/reference/response-res/res-set
-    //                  Or if you're looking for something higher-level:
-    //                     ° http://node-machine.org/machinepack-headers/set-response-header
+    //
+    //  (3) JSON:          Send data encoded as JSON.
+    //                     - Useful for a myriad of purposes; e.g. mobile apps, IoT devices, CLI
+    //                       scripts or daemons, SPAs (single-page apps) or any other webpage
+    //                       using AJAX (whether over HTTP or WebSockets), other API servers, and
+    //                       pretty much anything else you can imagine.
+    //                     - The output from the machine exit will be stringified before it is sent
+    //                       as the response body, so it must be JSON-compatible in the eyes of the
+    //                       machine spec (i.e. lossless across JSON serialization and without circular
+    //                       references).
+    //                     - That is, if the exit's output example contains any lamda (`->`) or
+    //                       ref (`===`) tokens, `machine-as-action` will refuse to rig this machine.
+    //
+    //
+    //  (4) FILE:          Download a file.
+    //                     - Files are useful sometimes.
+    //                     - Note that any response headers you might want to use such as `content-type`
+    //                       and `content-disposition` should be set in the implementation of your
+    //                       machine using `env.res.set()`.
+    //                     - For advanced documentation on `env.res.set()`, check out Sails docs:
+    //                         [Docs](http://sailsjs.org/documentation/reference/response-res/res-set)
+    //                     - Or if you're looking for something higher-level:
+    //                         [Install](http://node-machine.org/machinepack-headers/set-response-header)
+    //                     - If the example guaranteed from the machine exit is:
+    //                       • a number, boolean, JSON-compatible:
+    //                          then it will be encoded
+    //                       -- a buffer or a readable stream:
+    //                          then it will be streamed back to the requesting user-agent as binary.
+    //                       user-agent as a stream.  If the output from the machine exit is a
+    //                       readable
+    //
+    //
+    //  (5) REDIRECT:      Redirect the requesting user-agent to a different URL.
+    //                     - The *STRING* output by sending a "Location" header with the
+    //
+    //
+    //  (6) VIEW:          Responds with an HTML webpage.
+    //                     - The dictionary output from the machine exit will be passed to the view
+    //                       template as "locals".  Each key from this dictionary will be accessible
+    //                       as a local variable in the view template.
+    //                     - If the exit's output example is not a generic or faceted dictionary,
+    //                       then `machine-as-action` will refuse to rig this machine.
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
