@@ -268,7 +268,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  || nice-to-have      e.g. after successfully updating a resource like `PUT /discoparty/7`.
     //  || like plaintext  - The status code and any response headers will still be sent.
     //  || kinda advanced  - Even if the machine exit returns any output, it will be ignored.
-    //
+    // (can use "STANDARD"
+    //  to achieve same
+    //            effect)
     //
     //  (2) PLAIN TEXT:    Send plain text.
     //                     - Useful for sending raw data in a format like CSV or XML.
@@ -380,13 +382,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  (7) ERROR:         Handle an error with an appropriate response.
     //  /\                 - Useful exclusively for error handling.  This just calls res.negotiate()
     //  || warning:          and passes through the output.  If there is no output, it generates a
-    //  || this _could_      nicer error message and sends that through instead.
-    //  || be relegated    - If this is a Sails app, this error response type could call at least three different
-    //  || to error exits    views (404.ejs, 403.ejs, or 500.ejs), depending on the `status` property of whatever
-    //  || only in the       Error instance `res.negotiate()` ends up with.
-    //     future to make  - Note that, if the requesting user-agent is accessing the route from a browser,
-    //  things simpler.      its headers give it away.  The "error" response implements content
-    //                       negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
+    //  || this will not     nicer error message and sends that through instead.
+    //  || necessarily be  - If this is a Sails app, this error response type could call at least three different
+    //  || available for     views (404.ejs, 403.ejs, or 500.ejs), depending on the `status` property of whatever
+    //  || exits other than  Error instance `res.negotiate()` ends up with.
+    //     `error` exits.  - Note that, if the requesting user-agent is accessing the route from a browser,
+    //Still unclear whether  its headers give it away.  The "error" response implements content
+    // we need it or not.    negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
     //                       of a web browser, then it should see an error page (which error page depends on the output).
     //                       Alternately, if the same exact parameters were sent to the same exact URL,
     //                       but via AJAX or cURL, we would receive a JSON response instead.
