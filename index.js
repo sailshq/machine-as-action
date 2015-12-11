@@ -121,26 +121,44 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     }
 
 
-    // Build arguments (aka "input configuration") for the machine.
+    // Specify arguments (aka "input configurations") for the machine.
     ///////////////////////////////////////////////////////////////////////////////////////////////
     //
     // Machine arguments can be derived from any of the following sources:
     //
     //  (1) TEXT PARAMETERS:
-    //      Sails/Express request parameters from any combination of the following sources:
+    //      Use a request parameter as an argument.
+    //      - Any conventional Sails/Express request parameter is supported;
+    //        i.e. from any combination of the following sources:
     //       ° URL pattern variables (match groups in path; e.g. `/monkeys/:id/uploaded-files/*`)
     //       ° The querystring (e.g. `?foo=some%20string`)
     //       ° The request body (may be URL-encoded or JSON-serialized)
     //
     //  (2) FILES:
-    //      Incoming upstreams (event streams of multipart file upload streams) via Skipper.
-    //      Any receiving input(s) may continue to be either required or optional, but they must
-    //      declare themselves `example: '==='`.
+    //      Use one or more incoming file upstreams as an argument.
+    //      - Upstreams are multifile upload streams-- they are like standard multipart file upload
+    //        streams except that they support multiple files at a time.  To manage RAM usage, they
+    //        support TCP backpressure.  Upstreams also help prevent DoS attacks by removing the
+    //        buffering delay between the time a potentially malicious file starts uploading and
+    //        when your validation logic runs.  That means no incoming bytes are written to disk
+    //        before your code has had a chance to take a look.  If your use case demands it, you
+    //        can even continue to perform incremental validations as the file uploads (i.e. to
+    //        scan for malicious code or unexpectedly formatted data) or gradually pipe the stream
+    //        to `/dev/null` (a phony destination) as a honeypot to fool would-be attackers into
+    //        thinking their upload was successful.
+    //      - Upstream support is implemented by the Skipper body parser (a piece of middleware).
+    //        Skipper is the default body parser in Sails, but it is compatible with Express,
+    //        Connect, Hapi, or any other framework that exposes a conventional `req`/`res`/`next`
+    //        interface for its middleware stack.
+    //        body parser. event streams that emit multipart file upload streams) via Skipper.
+    //      - Any receiving input(s) may continue to be either required or optional, but they must
+    //        declare themselves refs by setting `example: '==='`. If not, then `machine-as-action`
+    //        will refuse to rig this machine.
     //
     //  (3) HEADERS:
-    //      HTTP request headers of any kind.
-    //      Any receiving input(s) may continue to be either required or optional, but they must
-    //      declare a string example.
+    //      Use an HTTP request headers as an argument.   (-NOT YET SUPPORTED-)
+    //      - Any receiving input(s) may continue to be either required or optional, but they must
+    //        declare a string example.
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -163,7 +181,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       });
     }
 
-    // Configure runtime parameter values as inputs
+    // TODO: eventually implement support for sourcing inputs from headers.
+    //       (mapping as closely as possible to Swagger's syntax -- not just for familiarity, but
+    //        also to maintain and strengthen the underlying conventions)
+
+    // Specify runtime parameter values as inputs
     var liveMachine = wetMachine.configure(inputConfiguration);
 
 
@@ -253,36 +275,37 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
     var callbacks = {};
-    _.each(_.keys(wetMachine.exits), function builtExitCallback(exitName){
+    _.each(_.keys(wetMachine.exits), function builtExitCallback(exitCodeName){
 
-      callbacks[exitName] = function respondApropos(output){
+      // Build a callback for this exit that sends the appropriate response.
+      callbacks[exitCodeName] = function respondApropos(output){
 
         // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
-        res.set('X-Exit', exitName);
+        res.set('X-Exit', exitCodeName);
 
-        switch (responses[exitName].responseType) {
+        switch (responses[exitCodeName].responseType) {
           case 'error':
             // If there is no output, build an error message explaining what happened.
-            return res.negotiate(!_.isUndefined(output) ? output : new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitName) ));
+            return res.negotiate(!_.isUndefined(output) ? output : new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) ));
           case 'status':
-            return res.send(responses[exitName].statusCode);
+            return res.send(responses[exitCodeName].statusCode);
           case 'json':
-            return res.json(responses[exitName].statusCode, output);
+            return res.json(responses[exitCodeName].statusCode, output);
           case 'redirect':
             // If `res.redirect()` is missing, we have to complain.
             // (but if this is a Sails app and this is a Socket request, let the framework handle it)
             if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
               throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
             }
-            return res.redirect(responses[exitName].statusCode, output);
+            return res.redirect(responses[exitCodeName].statusCode, output);
           case 'view':
             // If `res.view()` is missing, we have to complain.
             // (but if this is a Sails app and this is a Socket request, let the framework handle it)
             if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
               throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
             }
-            res.statusCode = responses[exitName].statusCode;
-            return res.view(responses[exitName].viewPath, output);
+            res.statusCode = responses[exitCodeName].statusCode;
+            return res.view(responses[exitCodeName].viewPath, output);
           default:
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
