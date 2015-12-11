@@ -99,6 +99,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
    */
   return function _requestHandler(req, res) {
 
+    // Set up a local variable that will be used to hold the "live machine"
+    // (which is a lot like a configured part or machine instruction)
+    var liveMachine;
+
+
     // Validate `req` and `res`
     ///////////////////////////////////////////////////////////////////////////////////////////////////
     // Note: we really only need to do these checks once, but they're a neglible hit to performance,
@@ -211,7 +216,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
     // Pass argins to the machine.
-    var liveMachine = wetMachine.configure(argins);
+    liveMachine = wetMachine.configure(argins);
 
 
     // Build and set `env`
