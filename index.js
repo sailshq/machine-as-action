@@ -14,47 +14,95 @@ var Machine = require('machine');
  * from a machine definition.  This wraps the machine in a function which
  * negotiates exits to the appropriate response method (e.g. res.negotiate)
  * and passes in all of the request parameters as inputs, as well as a few
- * other useful env variables including:
+ * other useful properties on `env` including:
  *  • req
  *  • res
  *
- * @param  {Object} machineDef
+ *
+ *
+ * Usage:
+ * ------------------------------------------------------------------------------------------------
+ * @param  {Dictionary} optsOrMachineDef
+ *           @required {Dictionary} machine
+ *                       A machine definition.
+ *
+ *           @optional {Dictionary} responses
+ *                       A set of static/lift-time response customizations.
+ *                       Each key refers to a particular machine exit, and each
+ *                       value is a dictionary of settings.
+ *                       TODO: document settings
+ *
+ * -OR-
+ *
+ *
+ * @param  {Dictionary} optsOrMachineDef
+ *                       A machine definition.
+ *
+ *===
+ *
  * @return {Function}
+ *         @param {Request} req
+ *         @param {Response} res
+ * ------------------------------------------------------------------------------------------------
  */
 
-module.exports = function machineAsAction(opts) {
+module.exports = function machineAsAction(optsOrMachineDef) {
 
-  opts = opts||{};
+  optsOrMachineDef = optsOrMachineDef||{};
 
-  // Use either `opts` or `opts.machine` as the machine definition
+  // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the machine definition
   var machineDef;
-  if (!opts.machine) {
-    machineDef = opts;
+  if (!_.isObject(optsOrMachineDef.machine)) {
+    machineDef = optsOrMachineDef || {};
   }
   else {
-    machineDef = opts.machine;
+    machineDef = (optsOrMachineDef||{}).machine || {};
   }
 
-
-  // Build machine by extending a default def with the actual provided def
-  var wetMachine = Machine.build(_.extend({
+  // Extend a default def with the actual provided def to allow for a laxer specification.
+  machineDef = _.extend({
     identity: machineDef.friendlyName||'anonymous-action',
     inputs: {},
     exits: {},
     fn: function (inputs, exits){
       exits.error(new Error('Not implemented yet!'));
     }
-  },machineDef||{}));
+  },machineDef);
 
-  // Allow specifying additional response mappings/metadata via `opts`
-  // (e.g. status code, content type, etc) But also normalize this response
-  // metadata and provide reasonable defaults so that we don't have to check
-  // it at again and again at runtime with each incoming request.
-  var responses = normalizeResMeta(opts.responses || {}, wetMachine.exits);
+  // Build machine instance: a "wet" machine.
+  // (This is just like a not-yet-configured "part" or "machine instruction".)
+  //
+  // This gives us access to the instantiated inputs and exits.
+  var wetMachine = Machine.build(machineDef);
+
+  // If any static response customizations/metadata were specified via `optsOrMachineDef`, combine
+  // them with the exit definitions of the machine to build a normalized response mapping that will
+  // be cached so it does not need to be recomputed again and again at runtime with each incoming
+  // request. (e.g. non-dyamic things like status code, response type, view name, etc)
+  var responses = normalizeResMeta(optsOrMachineDef.responses || {}, wetMachine.exits);
+  // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
+  // for `optsOrMachineDef.responses`, it will be irreversibly modified.
 
 
 
+
+  /**
+   * `_requestHandler()`
+   *
+   * At runtime, this code will be invoked each time the router receives a request and sends it to this action.
+   * --------------------------------------------------------------------------------------------------------------
+   * @param  {Request} req
+   * @param  {Response} res
+   */
   return function _requestHandler(req, res) {
+
+    // Validate `req` and `res`
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
+    // Note: we really only need to do these checks once, but they're a neglible hit to performance,
+    // and the extra µs is worth it to ensure continued compatibility when coexisting with other
+    // middleware, policies, frameworks, packages, etc. that might tamper with the global `req`
+    // object (e.g. Passport).
+    ///////////////////////////////////////////////////////////////////////////////////////////////////
 
     // Vanilla Express app requirements
     if (!res.json) {
@@ -71,6 +119,28 @@ module.exports = function machineAsAction(opts) {
     if (!res.negotiate) {
       throw new Error('`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
     }
+
+
+    // Build arguments (aka "input configuration") for the machine.
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Machine arguments can be derived from any of the following sources:
+    //
+    //  (1) TEXT PARAMETERS:
+    //      Sails/Express request parameters from any combination of the following sources:
+    //       ° URL pattern variables (match groups in path; e.g. `/monkeys/:id/uploaded-files/*`)
+    //       ° The querystring (e.g. `?foo=some%20string`)
+    //       ° The request body (may be URL-encoded or JSON-serialized)
+    //
+    //  (2) FILE PARAMETERS:
+    //      Incoming upstreams (event streams of multipart file upload streams) via Skipper.
+    //      Any receiving input(s) may continue to be either required or optional, but they must
+    //      declare themselves `example: '==='`.
+    //
+    //  (3) REQUEST HEADERS:
+    //      Request headers may be provided
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////////////
 
     // Build input configuration for machine using request parameters
     var inputConfiguration = _.reduce(wetMachine.inputs, function (memo, inputDef, inputName) {
@@ -94,21 +164,49 @@ module.exports = function machineAsAction(opts) {
     // Configure runtime parameter values as inputs
     var liveMachine = wetMachine.configure(inputConfiguration);
 
+
+    // Build and set `env`
+    ///////////////////////////////////////////////////////////////////////////////////////////////
+
     // Provide `env.req` and `env.res`
     var env = {
       req: req,
       res: res
     };
 
-    // If this is a Sails app, provide `env.sails`.
+    // If this is a Sails app, provide `env.sails` for convenience.
     if (req._sails) {
       env.sails = req._sails;
     }
 
-    // Set `env`
+    // Expose `env` in machine `fn`.
     liveMachine.setEnvironment(env);
 
-    // Now build up some exit callbacks...
+
+
+    // Now prepare some exit callbacks that map each exit to a particular response.
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Just like a machine's `fn` _must_ call one of its exits, this action _must_ send a response.
+    // But it can do so in a number of different ways:
+    //
+    //  (1) NO BODY:    do not send a response body (i.e. send status code + headers only)
+    //
+    //  (2) PLAIN TEXT: send response body as plain text
+    //
+    //  (3) JSON:       encode the response body as a JSON string before sending
+    //
+    //  (4) FILE:       download a file (pipe a binary stream to the response)
+    //                  Note that any response headers you might need like `content-type` and
+    //                  `content-disposition` should be set in the implementation of your machine
+    //                  using `env.res.set()`. For advanced documentation on `res.set()`, check out
+    //                  the Sails.js docs:
+    //                     ° http://sailsjs.org/documentation/reference/response-res/res-set
+    //                  Or if you're looking for something higher-level:
+    //                     ° http://node-machine.org/machinepack-headers/set-response-header
+    //
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
     var callbacks = {};
     _.each(_.keys(wetMachine.exits), function builtExitCallback(exitName){
 
@@ -153,145 +251,3 @@ module.exports = function machineAsAction(opts) {
 };
 
 
-
-
-/**
- * Normalize response metadata.
- *
- * @param  {Object} configuredResponses
- * @param  {Object} exits
- * @return {Object}      [normalized response metadata for each exit]
- */
-function normalizeResMeta (configuredResponses, exits){
-
-  // Note that we extend success and error exits here so that they will always exist
-  // when this custom response metadata is being built. This only runs once when initially
-  // building the action.
-  exits = _.extend({
-    success: {
-      description: 'Done.'
-    },
-    error: {
-      description: 'Unexpected error occurred.'
-    }
-  }, exits);
-
-  return _.reduce(exits, function (memo, exitDef, exitName) {
-    var resMeta = {};
-
-    // If response metadata was explicitly defined, use it.
-    // (also validate each property on the way in to ensure it is valid)
-    if ( _.isObject(configuredResponses[exitName]) ){
-      // Response type (`responseType`)
-      if (!_.isUndefined(configuredResponses[exitName].responseType)) {
-        resMeta.responseType = configuredResponses[exitName].responseType;
-        if (!_.contains(['error', 'status', 'json', 'redirect', 'view'], resMeta.responseType)) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', resMeta.responseType, exitName));
-        }
-      }
-      // Status code (`status`)
-      if (!_.isUndefined(configuredResponses[exitName].status)) {
-        resMeta.statusCode = +configuredResponses[exitName].status;
-        if (_.isNaN(resMeta.statusCode) || resMeta.statusCode < 100 || resMeta.statusCode > 599) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', resMeta.statusCode, exitName));
-        }
-      }
-      // View path (`view`)
-      if (!_.isUndefined(configuredResponses[exitName].view)) {
-        resMeta.viewPath = configuredResponses[exitName].view;
-        if (!_.isString(resMeta.viewPath)) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view ("%s") specified for exit "%s".', resMeta.viewPath, exitName));
-        }
-      }
-      // Should not allow explicit/hard-coded output data override here-
-      // instead just send that hard-coded data out of the machine exit.
-    }
-
-
-    // Then set any remaining unspecified stuff to reasonable defaults.
-    // (note that this makes decisions about how to respond based on the
-    //  static exit definition, not the runtime output value.)
-
-
-    // If `status` is explicitly set, but `responseType` is not, default it to either `status` or `json`.
-    // (See TODO below for more info)
-    if (!resMeta.responseType && resMeta.statusCode) {
-      resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-      // TODO ...be smart about streams here...
-    }
-
-
-    //  If this is the success exit, use the exit example to determine whether
-    //  to send back JSON data or just a status code.
-    if (exitName === 'success') {
-      // That is, unless an explicitly-set status code tells us otherwise
-      // if (!resMeta.responseType && resMeta.statusCode >= 400) {
-        // TODO: set response type to `error`
-        // (right now, can't do this, because res.negotiate() will cause the
-        //  status code to ALWAYS be set to 500-- which defeats the purpose.
-        //  Once that is adjusted in Sails core and the relevant generators,
-        //  this can be uncommented.  For now, if `status` is set, this is no
-        //  longer responseType=error.  And maybe that's for the best anyway.)
-        // resMeta.responseType = 'error';
-      // }
-      if (!resMeta.responseType) {
-        resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-        // TODO ...be smart about streams here...
-      }
-    }
-    // If this is not the success exit, and there's no configuration otherwise, we'll assume
-    // this is some kind of error.
-    else {
-      // That is, unless an explicitly-set status code tells us otherwise
-      // (...same deal as above here...)
-      // if (!resMeta.responseType && resMeta.statusCode < 400) {
-      //   resMeta.responseType = (_.isUndefined(exitDef.example)) ? 'status' : 'json';
-      //   if (exitDef.example === '~') {
-      //     // TODO ...be smart about streams here...
-      //     throw new Error('Stream type (`~`) is not yet supported!');
-      //   }
-      // }
-      // else {
-        resMeta.responseType = resMeta.responseType || 'error';
-      // }
-    }
-
-    // If status code was not explicitly specified, infer an appropriate code based on the response type.
-    // It'll either be `302` (redirect), `500` (error), or `200` (for everything else)
-    if (resMeta.responseType === 'redirect') {
-      resMeta.statusCode = resMeta.statusCode || 302;
-    }
-    else if (resMeta.responseType === 'error') {
-      resMeta.statusCode = resMeta.statusCode || 500;
-    }
-    else {
-      resMeta.statusCode = resMeta.statusCode || 200;
-    }
-
-    // Ensure response type is compatible with exit definition
-    if (resMeta.responseType === 'redirect') {
-      if (!_.isUndefined(exitDef.example) && !_.isString(exitDef.example)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitName,util.inspect(exitDef.example, false, null)));
-      }
-    }
-    else if (resMeta.responseType === 'view') {
-      if (!_.isUndefined(exitDef.example) && !_.isPlainObject(exitDef.example)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitName, util.inspect(exitDef.example, false, null)));
-      }
-    }
-    else if (resMeta.responseType === 'json') {
-      if (!_.isUndefined(exitDef.example) && _.isUndefined(exitDef.example)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitName));
-      }
-    }
-
-    // Log warning if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
-    if (resMeta.viewPath && resMeta.responseType !== 'view') {
-      console.error('Warning: unnecessary `view` response metadata provided for an exit which is not configured to respond with a view (actual responseType => "%s").', resMeta.responseType);
-    }
-
-    memo[exitName] = resMeta;
-    return memo;
-  }, {});
-
-}
