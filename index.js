@@ -3,7 +3,10 @@
  */
 
 var util = require('util');
+var Readable = require('stream').Readable;
 var _ = require('lodash');
+var Streamifier = require('streamifier');
+var rttc = require('rttc');
 var Machine = require('machine');
 var normalizeResponses = require('./helpers/normalize-responses');
 
@@ -245,36 +248,39 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // But it can do so in a number of different ways:
     //
     //  (1) ACK:           Do not send a response body.
-    //                     - Useful in situations where response data is unnecessary/wasteful,
-    //                       e.g. after successfully updating a resource like `PUT /discoparty/7`.
-    //                     - The status code and any response headers will still be sent.
-    //                     - Even if the machine exit returns any output, it will be ignored.
+    //  /\                 - Useful in situations where response data is unnecessary/wasteful,
+    //  || nice-to-have      e.g. after successfully updating a resource like `PUT /discoparty/7`.
+    //  || like plaintext  - The status code and any response headers will still be sent.
+    //  || kinda advanced  - Even if the machine exit returns any output, it will be ignored.
     //
     //
     //  (2) PLAIN TEXT:    Send plain text.
     //                     - Useful for sending raw data in a format like CSV or XML.
-    //                     - The *STRING* output from the machine exit will be sent verbatim as the
-    //                       response body. Custom response headers like "Content-Type" can be sent
-    //                       using `env.res.set()` or mp-headers.  For more info, see "FILE" below.
-    //                     - If the exit does not guarantee a *STRING* output, then `machine-as-action`
-    //                       will refuse to rig this machine.
+    //  /\                 - The *STRING* output from the machine exit will be sent verbatim as the
+    //  || prbly wont be    response body. Custom response headers like "Content-Type" can be sent
+    //  || implemented      using `env.res.set()` or mp-headers.  For more info, see "FILE" below.
+    //  since you can just - If the exit does not guarantee a *STRING* output, then `machine-as-action`
+    //  use "STANDARD" to    will refuse to rig this machine.
+    //  achieve the same
+    //  effect.
     //
     //
     //  (3) JSON:          Send data encoded as JSON.
     //                     - Useful for a myriad of purposes; e.g. mobile apps, IoT devices, CLI
-    //                       scripts or daemons, SPAs (single-page apps) or any other webpage
-    //                       using AJAX (whether over HTTP or WebSockets), other API servers, and
-    //                       pretty much anything else you can imagine.
-    //                     - The output from the machine exit will be stringified before it is sent
-    //                       as the response body, so it must be JSON-compatible in the eyes of the
-    //                       machine spec (i.e. lossless across JSON serialization and without circular
-    //                       references).
-    //                     - That is, if the exit's output example contains any lamda (`->`) or
-    //                       ref (`===`) tokens, `machine-as-action` will refuse to rig this machine.
+    //  /\                   scripts or daemons, SPAs (single-page apps) or any other webpage
+    //  || nice-to-have      using AJAX (whether over HTTP or WebSockets), other API servers, and
+    //  || but generally     pretty much anything else you can imagine.
+    //  || achieveable w/  - The output from the machine exit will be stringified before it is sent
+    //  || "STANDARD".       as the response body, so it must be JSON-compatible in the eyes of the
+    //  || Like plain text,  machine spec (i.e. lossless across JSON serialization and without circular
+    //  || kinda advanced.   references).
+    //  ||                 - That is, if the exit's output example contains any lamda (`->`) or
+    //                       ref (`===`) hollows, `machine-as-action` will refuse to rig this machine.
     //
     //
-    //  (4) FILE:          Download a file.
-    //                     - Files are useful sometimes.
+    //  (4) STANDARD:      Send a response as versatile as you.
+    //                     - Depending on the context, this might send plain text, download a file,
+    //                       transmit data as JSON, or send no response body at all.
     //                     - Note that any response headers you might want to use such as `content-type`
     //                       and `content-disposition` should be set in the implementation of your
     //                       machine using `env.res.set()`.
@@ -282,17 +288,70 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                         [Docs](http://sailsjs.org/documentation/reference/response-res/res-set)
     //                     - Or if you're looking for something higher-level:
     //                         [Install](http://node-machine.org/machinepack-headers/set-response-header)
-    //                     - If the example guaranteed from the machine exit is:
-    //                       • a number, boolean, JSON-compatible:
-    //                          then it will be encoded
-    //                       -- a buffer or a readable stream:
-    //                          then it will be streamed back to the requesting user-agent as binary.
-    //                       user-agent as a stream.  If the output from the machine exit is a
-    //                       readable
+    //
+    //                     - If the |_output example_| guaranteed from the machine exit is:
+    //                       • `null`/`undefined` - then that means there is no output.  Send only the
+    //                         status code and headers (no response body).
+    //                       • a number, boolean, generic dictionary, array, JSON-compatible (`*`), or a
+    //                         faceted dictionary that DOES NOT contain ANY nested lamda (`->`) or ref
+    //                         (`===`) hollows:
+    //                            ...then the runtime output will be encoded with rttc.dehydrated() and
+    //                               sent as JSON in the response body.  A JSON response header will be
+    //                               automatically set ("Content-type: application/json").
+    //                       • a lamda or a faceted dictionary that contains one or more lamda (`->`) and/or
+    //                         ref (`===`) hollows:
+    //                            ...then the runtime output will be encoded with rttc.dehydrate() and
+    //                               sent as JSON in the response body.  A JSON response header will be
+    //                               automatically set ("Content-type: application/json").
+    //                               **************************************************************************
+    //                               ******************************* WARNING **********************************
+    //                               Since the output example indicates it might contain non-JSON-compatible
+    //                               data, it is important to realize that transmitting this type of data in
+    //                               the response body could be lossy.  For example, when rttc.dehydrate()
+    //                               called, it toStrings functions into dehydrated cadavers andhumiliates
+    //                               instances of JavaScript objects by wiping out their prototypal methods,
+    //                               getters, setters, and any other hint of creativity that it finds. Objects
+    //                               with circular references are spun around until they're dizzy, and their
+    //                               circular references are replaced with strings (like doing util.inspect()
+    //                               with a `null` depth).
+    //                               **************************************************************************
+    //                               **************************************************************************
+    //                       • a ref:
+    //                            ...then at runtime, the outgoing value will be sniffed.  If:
+    //
+    //                            (A) it is a READABLE STREAM of binary or UTF-8 chunks (i.e. NOT in object mode):
+    //                                ...then it will be piped back to the requesting client in the response.
+    //
+    //                            (B) it is a buffer:
+    //                                ...then it will be converted to a readable binary stream...
+    //                                ...and piped back to the requesting client in the response.
+    //                            -------------------------------------------------------------------------------------
+    //                            ^ IT IS IMPORTANT TO POINT OUT THAT, WHEN PIPING EITHER BUFFERS OR STREAMS, THE
+    //                              CONTENT-TYPE IS SET TO OCTET STREAM UNLESS IT HAS ALREADY BEEN EXPLICITLY SPECIFIED
+    //                              USING `env.res.set()` (in which case it is left alone).
+    //                            -------------------------------------------------------------------------------------
+    //                       ----- Note about responding w/ plain text: ------------------------------------------------------
+    //                       If you need to respond with programatically-generated plain text, and you don't want it
+    //                       encoded as JSON (or if you MUST NOT encode it as JSON for some reason), then you just need
+    //                       to convert the plain text string variable into a readable stream (`===`) and feed it into
+    //                       standard response.
+    //                       ----- ==================================== ------------------------------------------------------
+    //
+    //                             (C) Finally, if the outgoing value at runtime does not match one of the two criteria above
+    //                                 (e.g. if it is a readable stream in object mode, or an array of numbers, or a haiku--
+    //                                 OR LITERALLY ANYTHING ELSE):
+    //                                 ...then the runtime output will be encoded with rttc.dehydrate() and
+    //                                    sent as JSON in the response body.  A JSON response header will be
+    //                                    automatically set to ("Content-type: application/json").
+    //                               *** PLEASE SEE WARNING ABOVE ABOUT `rttc.dehydrate()` ***
     //
     //
     //  (5) REDIRECT:      Redirect the requesting user-agent to a different URL.
-    //                     - The *STRING* output by sending a "Location" header with the
+    //                     - When redirecting, no response body is sent.  Instead, the *STRING* output
+    //                       from the machine is sent as the "Location" response header.  This tells
+    //                       the requesting device to go talk to that URL instead.
+    //                     - If the exit's output example is not a string, then `machine-as-action`
+    //                       will refuse to rig this machine.
     //
     //
     //  (6) VIEW:          Responds with an HTML webpage.
@@ -301,6 +360,20 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                       as a local variable in the view template.
     //                     - If the exit's output example is not a generic or faceted dictionary,
     //                       then `machine-as-action` will refuse to rig this machine.
+    //
+    //  (7) ERROR:         Handle an error with an appropriate response.
+    //  /\                 - Useful exclusively for error handling.  This just calls res.negotiate()
+    //  || warning:          and passes through the output.  If there is no output, it generates a
+    //  || this _could_      nicer error message and sends that through instead.
+    //  || be relegated    - If this is a Sails app, this error response type could call at least three different
+    //  || to error exits    views (404.ejs, 403.ejs, or 500.ejs), depending on the `status` property of whatever
+    //  || only in the       Error instance `res.negotiate()` ends up with.
+    //     future to make  - Note that, if the requesting user-agent is accessing the route from a browser,
+    //  things simpler.      its headers give it away.  The "error" response implements content
+    //                       negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
+    //                       of a web browser, then it should see an error page (which error page depends on the output).
+    //                       Alternately, if the same exact parameters were sent to the same exact URL,
+    //                       but via AJAX or cURL, we would receive a JSON response instead.
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -313,14 +386,64 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
         res.set('X-Exit', exitCodeName);
 
+
         switch (responses[exitCodeName].responseType) {
+
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+          // Currently here strictly for backwards compatibility-
+          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'error':
-            // If there is no output, build an error message explaining what happened.
-            return res.negotiate(!_.isUndefined(output) ? output : new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) ));
+            // Use our output as the argument to `res.negotiate()`.
+            var catchallErr = output;
+            // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
+            if (_.isUndefined(output)) {
+              catchallErr = new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
+            }
+            return res.negotiate(catchallErr);
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+          // Currently here strictly for backwards compatibility-
+          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'status':
             return res.send(responses[exitCodeName].statusCode);
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+          // Currently here strictly for backwards compatibility-
+          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'json':
             return res.json(responses[exitCodeName].statusCode, output);
+          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+          case 'standard':
+            // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
+            //   but we're careful to not USE that data if we understood the exit to be null)
+            var exitDef = wetMachine.exits[exitCodeName];
+            if (_.isUndefined(exitDef.example)) {
+              return res.send(responses[exitCodeName].statusCode);
+            }
+
+            // • Expecting ref:
+            if (exitDef.example === '===') {
+              // • Readable stream
+              if (output instanceof Readable) {
+                res.status(responses[exitCodeName].statusCode);
+                return output.pipe(res);
+              }
+              // • Buffer
+              else if (output instanceof Buffer) {
+                res.status(responses[exitCodeName].statusCode);
+                return Streamifier.createReadStream(output).pipe(res);
+              }
+              // • else just continue on to our JSON catch-all below
+            }
+
+            // • Anything else:  (i.e. JSON / rttc.dehydrate())
+            return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output));
+
+
           case 'redirect':
             // If `res.redirect()` is missing, we have to complain.
             // (but if this is a Sails app and this is a Socket request, let the framework handle it)
@@ -328,6 +451,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
             }
             return res.redirect(responses[exitCodeName].statusCode, output);
+
+
           case 'view':
             // If `res.view()` is missing, we have to complain.
             // (but if this is a Sails app and this is a Socket request, let the framework handle it)
@@ -336,6 +461,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             }
             res.statusCode = responses[exitCodeName].statusCode;
             return res.view(responses[exitCodeName].viewPath, output);
+
+
           default:
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
