@@ -33,7 +33,16 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       A set of static/lift-time response customizations.
  *                       Each key refers to a particular machine exit, and each
  *                       value is a dictionary of settings.
- *                       TODO: document settings
+ *
+ *                       e.g.
+ *                       {
+ *                         success: {
+ *                           responseType: 'view',       // (view|redirect|standard)
+ *                           viewPath: 'pages/homepage',
+ *                           statusCode: 204
+ *                         }
+ *                       }
+ *
  *
  *           @optional {Array} files
  *                     An array of input ids identifying inputs which expect to
@@ -41,17 +50,17 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     must have `example: '==='`, but they needn't necessarily be
  *                     `required`.
  *
- *                      **************************************************************
- *                      TODO: bind a `.on('error')` handler for each upstream as it's
- *                      created so it doesn't have to be done in userland code in the
- *                      machine fn (which is a no go).  If the `on('error')` fires,
- *                      do nothing.
- *                      ************************************************************
+ *                     e.g.
+ *                     [ 'avatar' ]
+ *
  *
  *           @optional {String} urlWildcardSuffix
  *                     if '', then there is no wildcard suffix.  Otherwise, this is the
  *                     c-input id of the machine input which is being referenced by the
  *                     pattern variable serving as the wildcard suffix.
+ *
+ *                     e.g.
+ *                     'docPath'
  *
  *
  * -OR-
@@ -193,26 +202,33 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // appropriate argument.
     var argins = _.reduce(wetMachine.inputs, function (memo, inputDef, inputCodeName) {
 
+      /////////////////////////////////////////////////////////////////////////////////////////////////////////
+      ///OLD:
       // If this input is named "*", we understand that this is indicating it's special; that it represents
       // a special, agressive kind of match group that sometimes appears in URL patterns.  This special match group
       // is known as a "wildcard suffix".
-      if (inputCodeName === '*') {
+      // if (inputCodeName === '*') {
+      //   memo[inputCodeName] = req.param('0');
+      // }
+      /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+      // If this input is called out by the `urlWildcardSuffix`, then we understand it as "*" from the
+      // URL pattern.  This is indicating it's special; that it represents a special, agressive kind of match
+      // group that sometimes appears in URL patterns.  This special match group is known as a "wildcard suffix".
+      // It is just like any other match group except that it (1) can match forward slashes, (2) can only appear
+      // at the very end of the URL pattern, and (3) there can only be one like it per route.
+      //
+      // Note that we compare against the `id` in the input definition if it has one (otherwise, we use the code name)
+      // This is to support any programmatically generated machine inputs which might have immutable IDs _different_
+      // from their code names.
+      if (optsOrMachineDef.urlWildcardSuffix &&
+        optsOrMachineDef.urlWildcardSuffix === (inputDef.id || inputCodeName) ) {
         memo[inputCodeName] = req.param('0');
       }
-      // Otherwise, this is just your standard, run of the mill input.
+      // Otherwise, this is just your standard, run of the mill parameter.
       else {
         memo[inputCodeName] = req.param(inputCodeName);
       }
-
-      // ---
-      // Note: formerly, we omitted `undefined` values from this dictionary.
-      // This doesn't seem to be necessary, so I removed it.  But leaving a note
-      // here in case we're freaking out later trying to figure out why the world
-      // is falling apart.    ~mm dec11,2015
-      // ```
-      // if (!_.isUndefined(paramVal)) { memo[inputCodeName] = paramVal; } return memo;
-      // ```
-      // ---
 
       return memo;
     }, {});
@@ -225,7 +241,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
       }
       _.each(optsOrMachineDef.files, function (fileParamName){
+        // Supply this upstream as an argument for the specified input.
         argins[fileParamName] = req.file(fileParamName);
+        // Also bind an `error` event so that, if the machine's implementation (`fn`)
+        // doesn't handle the upstream, it won't crash the server.
+        argins[fileParamName].on('error', function (err){
+          console.error('Unhandled file upload ('+fileParamName+') emitted an error:', err);
+        });
       });
     }
 
@@ -403,13 +425,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
         // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
         res.set('X-Exit', exitCodeName);
+        // TODO: make this configurable
 
 
         switch (responses[exitCodeName].responseType) {
 
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          // Currently here strictly for backwards compatibility-
-          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'error':
             // Use our output as the argument to `res.negotiate()`.
             var catchallErr = output;
@@ -418,7 +438,6 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               catchallErr = new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
             }
             return res.negotiate(catchallErr);
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           // Currently here strictly for backwards compatibility-
