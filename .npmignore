@@ -1,5 +1,6 @@
 *#
 node_modules
+examples
 ssl
 .DS_STORE
 *.swo
@@ -18,3 +19,4 @@ CONTRIBUTING.md
 *.md
 **/*.md
 test
+tests
