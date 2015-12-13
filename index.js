@@ -33,6 +33,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       A set of static/lift-time response customizations.
  *                       Each key refers to a particular machine exit, and each
  *                       value is a dictionary of settings.
+ *                       @default {}
  *
  *                       e.g.
  *                       {
@@ -49,18 +50,24 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     receive file uploads instead of text parameters. These file inputs
  *                     must have `example: '==='`, but they needn't necessarily be
  *                     `required`.
+ *                     @default  []
  *
  *                     e.g.
  *                     [ 'avatar' ]
  *
  *
  *           @optional {String} urlWildcardSuffix
- *                     if '', then there is no wildcard suffix.  Otherwise, this is the
- *                     c-input id of the machine input which is being referenced by the
- *                     pattern variable serving as the wildcard suffix.
+ *                     if '' or unspecified, then there is no wildcard suffix.  Otherwise,
+ *                     this is the c-input id of the machine input which is being referenced
+ *                     by the pattern variable serving as the wildcard suffix.
+ *                     @default ''
  *
  *                     e.g.
  *                     'docPath'
+ *
+ *           @optional {Boolean} disableXExitHeader
+ *                     if set, then do not set the `X-Exit` response header.
+ *                     @default false
  *
  *
  * -OR-
@@ -202,16 +209,6 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // appropriate argument.
     var argins = _.reduce(wetMachine.inputs, function (memo, inputDef, inputCodeName) {
 
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////
-      ///OLD:
-      // If this input is named "*", we understand that this is indicating it's special; that it represents
-      // a special, agressive kind of match group that sometimes appears in URL patterns.  This special match group
-      // is known as a "wildcard suffix".
-      // if (inputCodeName === '*') {
-      //   memo[inputCodeName] = req.param('0');
-      // }
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
       // If this input is called out by the `urlWildcardSuffix`, then we understand it as "*" from the
       // URL pattern.  This is indicating it's special; that it represents a special, agressive kind of match
       // group that sometimes appears in URL patterns.  This special match group is known as a "wildcard suffix".
@@ -244,16 +241,18 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         // Supply this upstream as an argument for the specified input.
         argins[fileParamName] = req.file(fileParamName);
         // Also bind an `error` event so that, if the machine's implementation (`fn`)
-        // doesn't handle the upstream, it won't crash the server.
+        // doesn't handle the upstream, or anything else goes wrong with the upstream,
+        // it won't crash the server.
         argins[fileParamName].on('error', function (err){
-          console.error('Unhandled file upload ('+fileParamName+') emitted an error:', err);
+          console.error('Upstream (file upload: `'+fileParamName+'`) emitted an error:', err);
         });
       });
     }
 
-    // TODO: eventually implement support for sourcing inputs from headers.
-    //       (mapping as closely as possible to Swagger's syntax -- not just for familiarity, but
-    //        also to maintain and strengthen the underlying conventions)
+    // Eventually, we may consider implementing support for sourcing inputs from headers.
+    //  (if so, we'll likely map as closely as possible to Swagger's syntax --
+    //   not just for familiarity, but also to maintain and strengthen the underlying
+    //   conventions)
 
 
     // Pass argins to the machine.
@@ -417,16 +416,24 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
+    // We use a local variable (`alreadyExited`) as a spinlock.
+    var alreadyExited;
+
     var callbacks = {};
     _.each(_.keys(wetMachine.exits), function builtExitCallback(exitCodeName){
 
       // Build a callback for this exit that sends the appropriate response.
       callbacks[exitCodeName] = function respondApropos(output){
 
-        // Encode exit name as a response header (involves breaking this up into each of the exits specified by the machine definition)
-        res.set('X-Exit', exitCodeName);
-        // TODO: make this configurable
+        // Spinlock
+        if (alreadyExited) return;
+        alreadyExited = true;
 
+        // Unless being prevented with the `disableXExitHeader` option,
+        // encode exit name as the `X-Exit` response header
+        if (!optsOrMachineDef.disableXExitHeader) {
+          res.set('X-Exit', exitCodeName);
+        }
 
         switch (responses[exitCodeName].responseType) {
 
