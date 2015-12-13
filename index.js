@@ -39,8 +39,8 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       {
  *                         success: {
  *                           responseType: 'view',       // (view|redirect|standard)
- *                           viewPath: 'pages/homepage',
- *                           statusCode: 204
+ *                           viewPath: 'pages/homepage', // (only relevant if `responseType` is "view")
+ *                           statusCode: 204             // any valid HTTP status code
  *                         }
  *                       }
  *
