@@ -58,7 +58,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *
  *           @optional {String} urlWildcardSuffix
  *                     if '' or unspecified, then there is no wildcard suffix.  Otherwise,
- *                     this is the c-input id of the machine input which is being referenced
+ *                     this is the code name of the machine input which is being referenced
  *                     by the pattern variable serving as the wildcard suffix.
  *                     @default ''
  *
@@ -215,11 +215,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       // It is just like any other match group except that it (1) can match forward slashes, (2) can only appear
       // at the very end of the URL pattern, and (3) there can only be one like it per route.
       //
-      // Note that we compare against the `id` in the input definition if it has one (otherwise, we use the code name)
-      // This is to support any programmatically generated machine inputs which might have immutable IDs _different_
-      // from their code names.
+      // Note that we compare against the code name in the input definition.  The `urlWildcardSuffix` provided to
+      // machine-as-action should reference the c-input by code name, not by any other sort of ID (i.e. if you are
+      // using a higher-level immutable ID abstraction, rewrite the urlWildcardSuffix to the code name beforehand)
       if (optsOrMachineDef.urlWildcardSuffix &&
-        optsOrMachineDef.urlWildcardSuffix === (inputDef.id || inputCodeName) ) {
+        optsOrMachineDef.urlWildcardSuffix === inputCodeName ) {
         memo[inputCodeName] = req.param('0');
       }
       // Otherwise, this is just your standard, run of the mill parameter.
