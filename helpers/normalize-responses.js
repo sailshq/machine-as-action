@@ -45,8 +45,8 @@ module.exports = function normalizeResponses (configuredResponses, exits){
         }
       }
       // Status code (`status`)
-      if (!_.isUndefined(configuredResponses[exitCodeName].status)) {
-        resMeta.statusCode = +configuredResponses[exitCodeName].status;
+      if (!_.isUndefined(configuredResponses[exitCodeName].statusCode)) {
+        resMeta.statusCode = +configuredResponses[exitCodeName].statusCode;
         if (_.isNaN(resMeta.statusCode) || resMeta.statusCode < 100 || resMeta.statusCode > 599) {
           throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', resMeta.statusCode, exitCodeName));
         }
