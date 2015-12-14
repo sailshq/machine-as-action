@@ -102,13 +102,31 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
   machineDef = _.extend({
+    // TODO: mash up friendly name into a valid identity for the sake of consistent error msgs
     identity: machineDef.friendlyName||'anonymous-action',
     inputs: {},
     exits: {},
-    fn: function (inputs, exits){
-      exits.error(new Error('Not implemented yet!'));
-    }
   },machineDef);
+
+  // If no `fn` was provided, dynamically build a stub fn that always responds with `success`,
+  // using the `example` as output data, if one was specified.
+  if (!machineDef.fn) {
+    machineDef.fn = function (inputs, exits, env){
+
+      // Set a header to as a debug flag indicating this is just a stub.
+      env.res.set('X-Stub', machineDef.identity);
+
+      // Then exit success, using the output example (if relevant)
+      if (_.isObject(machineDef.exits.success) && !_.isUndefined(machineDef.exits.success.example)) {
+        return exits.success(machineDef.exits.success.example);
+      }
+      // If there's no output example, just exit void.
+      else {
+        return exits.success();
+      }
+
+    };
+  }
 
   // Build machine instance: a "wet" machine.
   // (This is just like a not-yet-configured "part" or "machine instruction".)
