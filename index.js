@@ -44,6 +44,9 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                         }
  *                       }
  *
+ *                       Note that these additional exit-specific response customizations may alternatively
+ *                       be included inline in the exits of the machine definition (purely for convenience).
+ *
  *
  *           @optional {Array} files
  *                     An array of input ids identifying inputs which expect to
@@ -66,7 +69,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     'docPath'
  *
  *           @optional {Boolean} disableXExitHeader
- *                     if set, then do not set the `X-Exit` response header.
+ *                     if set, then do not set the `X-Exit` response header for any exit.
  *                     @default false
  *
  *
@@ -450,6 +453,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           // Currently here strictly for backwards compatibility-
           // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'status':
+            console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `standard` instead.');
             return res.send(responses[exitCodeName].statusCode);
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -457,6 +461,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           // Currently here strictly for backwards compatibility-
           // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'json':
+            console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `standard` instead.');
             return res.json(responses[exitCodeName].statusCode, output);
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
