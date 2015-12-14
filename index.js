@@ -72,6 +72,20 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     if set, then do not set the `X-Exit` response header for any exit.
  *                     @default false
  *
+ *           @optional {Boolean} disableDevelopmentHeaders
+ *                     if set, then do not set headers w/ exit info during development.
+ *                     Development headers include:
+ *                       • `X-Exit-Friendly-Name`
+ *                       • `X-Exit-Description`
+ *                       • `X-Exit-Extended-Description`
+ *                       • `X-Exit-More-Info-Url`
+ *                       • `X-Exit-Output-Friendly-Name`
+ *                       • `X-Exit-Output-Description`
+ *                     These development headers are never shown in a production env
+ *                     (i.e. when process.env.NODE_ENV === 'production') or when they
+ *                     are not relevant.
+ *                     @default false
+ *
  *
  * -OR-
  *
@@ -422,8 +436,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  || available for     views (404.ejs, 403.ejs, or 500.ejs), depending on the `status` property of whatever
     //  || exits other than  Error instance `res.negotiate()` ends up with.
     //     `error` exits.  - Note that, if the requesting user-agent is accessing the route from a browser,
-    //Still unclear whether  its headers give it away.  The "error" response implements content
-    // we need it or not.    negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
+    //                       its headers give it away.  The "error" response implements content
+    //                       negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
     //                       of a web browser, then it should see an error page (which error page depends on the output).
     //                       Alternately, if the same exact parameters were sent to the same exact URL,
     //                       but via AJAX or cURL, we would receive a JSON response instead.
@@ -439,14 +453,43 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       // Build a callback for this exit that sends the appropriate response.
       callbacks[exitCodeName] = function respondApropos(output){
 
-        // Spinlock
+        // This spinlock protects against the machine calling more than one
+        // exit, or the same exit twice.
         if (alreadyExited) return;
         alreadyExited = true;
 
         // Unless being prevented with the `disableXExitHeader` option,
-        // encode exit name as the `X-Exit` response header
+        // encode exit code name as the `X-Exit` response header.
         if (!optsOrMachineDef.disableXExitHeader) {
           res.set('X-Exit', exitCodeName);
+        }
+
+        // Unless the NODE_ENV environment variable is set to `production`,
+        // or this has been manually disabled, send down all other available
+        // metadata about the exit for use during development.
+        if ( !process.env.NODE_ENV.match(/production/i) && !optsOrMachineDef.disableDevelopmentHeaders) {
+          var responseInfo = responses[exitCodeName];
+          if (responseInfo.friendlyName) {
+            res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
+          }
+          if (responseInfo.description) {
+            res.set('X-Exit-Description', responseInfo.description);
+          }
+          if (responseInfo.extendedDescription) {
+            res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
+          }
+          if (responseInfo.moreInfoUrl) {
+            res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
+          }
+          // Only include dev headers involving output if there _is_ output:
+          if (!_.isUndefined(output)) {
+            if (responseInfo.outputFriendlyName) {
+              res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+            }
+            if (responseInfo.outputDescription) {
+              res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+            }
+          }
         }
 
         switch (responses[exitCodeName].responseType) {
