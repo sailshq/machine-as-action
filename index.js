@@ -169,20 +169,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // object (e.g. Passport).
     ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Vanilla Express app requirements
+    // Sails/Express App Requirements
     if (!res.json) {
       throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
     if (!res.send) {
       throw new Error('`machine-as-action` requires `res.send()` to exist (i.e. a Sails.js or Express app)');
-    }
-
-    // Sails.js app requirements
-    if (!req.allParams) {
-      throw new Error('`machine-as-action` requires `req.allParams()` to exist (i.e. a Sails.js app with the request hook enabled)');
-    }
-    if (!res.negotiate) {
-      throw new Error('`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled)');
     }
 
 
@@ -460,6 +452,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         switch (responses[exitCodeName].responseType) {
 
           case 'error':
+            if (!res.negotiate) {
+              return res.send(500, '`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+            }
             // Use our output as the argument to `res.negotiate()`.
             var catchallErr = output;
             // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
@@ -532,6 +527,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
           default:
+            if (!res.negotiate) {
+              return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
+            }
             return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
       };
