@@ -15,6 +15,8 @@ var _ = require('lodash');
  * @param  {Dictionary} exits
  * @return {Dictionary}      [normalized response metadata for each exit]
  *
+ * NOTE THAT THIS FUNCTION MUTATES BOTH THE PROVIDED `configuredResponses` AND THE PROVIDED `exits`!
+ *
  * @throws {Error} If [machine-as-action doesn't know how to handle something.]
  */
 module.exports = function normalizeResponses (configuredResponses, exits){
@@ -32,35 +34,36 @@ module.exports = function normalizeResponses (configuredResponses, exits){
   }, exits);
 
   return _.reduce(exits, function (memo, exitDef, exitCodeName) {
-    var resMeta = {};
+
+    // If a response def exists, merge its properties into the exit definition.
+    if (configuredResponses[exitCodeName]) {
+      _.extend(exitDef, configuredResponses[exitCodeName]);
+    }
 
     // If response metadata was explicitly defined, use it.
     // (also validate each property on the way in to ensure it is valid)
-    if ( _.isObject(configuredResponses[exitCodeName]) ){
-      // Response type (`responseType`)
-      if (!_.isUndefined(configuredResponses[exitCodeName].responseType)) {
-        resMeta.responseType = configuredResponses[exitCodeName].responseType;
-        if (!_.contains(['standard', 'error', 'status', 'json', 'redirect', 'view'], resMeta.responseType)) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', resMeta.responseType, exitCodeName));
-        }
+    //
+    // Response type (`responseType`)
+    if (!_.isUndefined(exitDef.responseType)) {
+      if (!_.contains(['standard', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName));
       }
-      // Status code (`status`)
-      if (!_.isUndefined(configuredResponses[exitCodeName].statusCode)) {
-        resMeta.statusCode = +configuredResponses[exitCodeName].statusCode;
-        if (_.isNaN(resMeta.statusCode) || resMeta.statusCode < 100 || resMeta.statusCode > 599) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', resMeta.statusCode, exitCodeName));
-        }
-      }
-      // View path (`view`)
-      if (!_.isUndefined(configuredResponses[exitCodeName].view)) {
-        resMeta.viewPath = configuredResponses[exitCodeName].view;
-        if (!_.isString(resMeta.viewPath)) {
-          throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view ("%s") specified for exit "%s".', resMeta.viewPath, exitCodeName));
-        }
-      }
-      // Should not allow explicit/hard-coded output data override here-
-      // instead just send that hard-coded data out of the machine exit.
     }
+    // Status code (`statusCode`)
+    if (!_.isUndefined(exitDef.statusCode)) {
+      exitDef.statusCode = +exitDef.statusCode;
+      if (_.isNaN(exitDef.statusCode) || exitDef.statusCode < 100 || exitDef.statusCode > 599) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', exitDef.statusCode, exitCodeName));
+      }
+    }
+    // View path (`viewPath`)
+    if (!_.isUndefined(exitDef.viewPath)) {
+      if (!_.isString(exitDef.viewPath)) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view path ("%s") specified for exit "%s".', exitDef.viewPath, exitCodeName));
+      }
+    }
+
+
 
     // Then set any remaining unspecified stuff to reasonable defaults.
     // (note that this makes decisions about how to respond based on the
@@ -69,63 +72,63 @@ module.exports = function normalizeResponses (configuredResponses, exits){
 
     // If `responseType` is not set, we assume it must be `standard`
     // unless this is the error exit, in which case we assume it must be `error`.
-    if (!resMeta.responseType) {
+    if (!exitDef.responseType) {
       if (exitCodeName === 'error') {
-        resMeta.responseType = 'error';
+        exitDef.responseType = 'error';
       }
       else {
-        resMeta.responseType = 'standard';
+        exitDef.responseType = 'standard';
       }
     }
 
     // If status code was not explicitly specified, infer an appropriate code based on the response type and/or exitCodeName.
-    if (!resMeta.statusCode) {
+    if (!exitDef.statusCode) {
       // First, if this is the error exit or this response is using the "error" response type:
       // `500`   (response type: error) -OR- (error exit-- should always be response type: 'error' anyway, this is just a failsafe)
-      if (resMeta.responseType === 'error' || exitCodeName === 'error') {
-        resMeta.statusCode = 500;
+      if (exitDef.responseType === 'error' || exitCodeName === 'error') {
+        exitDef.statusCode = 500;
       }
       // Otherwise, if this is a redirect:
       // `302` (redirect)
-      else if (resMeta.responseType === 'redirect') {
-        resMeta.statusCode = 302;
+      else if (exitDef.responseType === 'redirect') {
+        exitDef.statusCode = 302;
       }
       // Otherwise, if this is a view OR it's the success exit:
       // `200` (view)  -OR-  (success exit)
-      else if (resMeta.responseType === 'view' || exitCodeName === 'success') {
-        resMeta.statusCode = 200;
+      else if (exitDef.responseType === 'view' || exitCodeName === 'success') {
+        exitDef.statusCode = 200;
       }
       // Otherwise... well, this must be some other exit besides success and error
       // and it must not be doing a redirect or serving a view:
       // `500` (any other exit besides success)
       else {
-        resMeta.statusCode = 500;
+        exitDef.statusCode = 500;
       }
     }
 
     // Ensure response type is compatible with exit definition
-    if (resMeta.responseType === 'redirect') {
+    if (exitDef.responseType === 'redirect') {
       if (!_.isUndefined(exitDef.example) && !_.isString(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitCodeName,util.inspect(exitDef.example, false, null)));
       }
     }
-    else if (resMeta.responseType === 'view') {
+    else if (exitDef.responseType === 'view') {
       if (!_.isUndefined(exitDef.example) && !_.isPlainObject(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(exitDef.example, false, null)));
       }
     }
-    else if (resMeta.responseType === 'json') {
+    else if (exitDef.responseType === 'json') {
       if (!_.isUndefined(exitDef.example) && _.isUndefined(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitCodeName));
       }
     }
 
     // Log warning if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
-    if (resMeta.viewPath && resMeta.responseType !== 'view') {
-      console.error('Warning: unnecessary `view` response metadata provided for an exit which is not configured to respond with a view (actual responseType => "%s").', resMeta.responseType);
+    if (exitDef.viewPath && exitDef.responseType !== 'view') {
+      console.error('Warning: unnecessary `view` response metadata provided for an exit which is not configured to respond with a view (actual responseType => "%s").', exitDef.responseType);
     }
 
-    memo[exitCodeName] = resMeta;
+    memo[exitCodeName] = exitDef;
     return memo;
   }, {});
 
