@@ -140,7 +140,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
   var responses = normalizeResponses(optsOrMachineDef.responses || {}, wetMachine.exits);
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
-  // for `optsOrMachineDef.responses`, it will be irreversibly modified.
+  // for `optsOrMachineDef.responses`, it will be irreversibly modified.  Also the exits in the
+  // machine definition will be irreversibly modified.
 
 
 
