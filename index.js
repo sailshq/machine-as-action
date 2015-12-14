@@ -481,14 +481,19 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           if (responseInfo.moreInfoUrl) {
             res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
           }
-          // Only include dev headers involving output if there _is_ output:
-          if (!_.isUndefined(output)) {
+          // Only include output headers if there _is_ output and
+          // this is a standard response:
+          if (responseInfo.responseType === 'standard' && !_.isUndefined(output)) {
             if (responseInfo.outputFriendlyName) {
               res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
             }
             if (responseInfo.outputDescription) {
               res.set('X-Exit-Output-Description', responseInfo.outputDescription);
             }
+          }
+          // Otherwise if this is a view response, include the view path.
+          else if (responseInfo.responseType === 'view') {
+            res.set('X-Exit-View-Path', responseInfo.viewPath);
           }
         }
 
