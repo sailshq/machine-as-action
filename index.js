@@ -552,7 +552,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             }
 
             // • Anything else:  (i.e. JSON / rttc.dehydrate())
-            return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output));
+            return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
 
 
           case 'redirect':
