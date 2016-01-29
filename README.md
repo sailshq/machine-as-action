@@ -75,8 +75,7 @@ module.exports = {
 For each of your exits, you can optionally specify a `responseType`, `status`, and/or `view`.
 
 **responseType** is one of the following:
- + status   (just status code, no response body, exit output will be ignored)
- + json     (exit output will be send down as a JSON-formatted response body)
+ + standard (exit output depends on the context: this might send plain text, download a file, transmit data as JSON, or send no response body at all.)
  + view     (render and respond with a view; exit output will be provided as view locals)
  + redirect (redirect to the URL returned as the exit output)
  + error    (use `res.negotiate()` to send the appropriate default error response based on the exit output)
