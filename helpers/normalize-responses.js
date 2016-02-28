@@ -118,6 +118,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       }
     }
     else if (exitDef.responseType === 'json') {
+      // ** NOTE THAT THE `json` RESPONSE TYPE IS DEPRECATED **
       if (!_.isUndefined(exitDef.example) && _.isUndefined(exitDef.example)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitCodeName));
       }
