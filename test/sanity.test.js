@@ -296,7 +296,7 @@ testRoute('customizing success exit to use a special status code in the response
   responses: {
     success: {
       responseType: 'status',
-      status: 201
+      statusCode: 201
     }
   }
 }, function (err, resp, body, done){
@@ -430,7 +430,7 @@ testRoute('exits other than success can have their status codes overriden too', 
     },
     whatever: {
       responseType: 'status',
-      status: 204
+      statusCode: 204
     }
   }
 }, function (err, resp, body, done){
@@ -469,7 +469,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
       responseType: 'json'
     },
     whatever: {
-      status: 204
+      statusCode: 204
     }
   }
 }, function (err, resp, body, done){
@@ -503,7 +503,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
   },
   responses: {
     success: {
-      status: 503
+      statusCode: 503
     },
     whatever: {}
   }
@@ -537,7 +537,7 @@ testRoute('`redirect` with custom status code', {
   },
   responses: {
     success: {
-      status: 301,
+      statusCode: 301,
       responseType: 'redirect'
     },
     whatever: {}
@@ -576,7 +576,7 @@ testRoute('`redirect` with custom status code', {
     success: {
     },
     whatever: {
-      status: 301,
+      statusCode: 301,
       responseType: 'redirect'
     }
   }
@@ -639,7 +639,7 @@ testRoute('`redirect` with custom status code', {
 //   },
 //   responses: {
 //     success: {
-//       status: 205,
+//       statusCode: 205,
 //       responseType: 'view',
 //       view: 'homepage'
 //     },
