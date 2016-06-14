@@ -78,11 +78,11 @@ For each of your exits, you can optionally specify a `responseType`, `status`, a
  + ""         (the standard response:  Determine an appropriate response based on context: this might send plain text, download a file, transmit data as JSON, or send no response body at all.)
  + "view"     (render and respond with a view; exit output will be provided as view locals)
  + "redirect" (redirect to the URL returned as the exit output)
- + "error"    (use `res.negotiate()` to send the appropriate default error response based on the exit output)
+ + "error"    (use `res.serverError()` to send the appropriate default error response, such as an error page or a JSON message with a 500 status code.  Uses your project's configured responses from `api/responses/`, if applicable.)
 
-**statusCode** is the status code to respond with.
+**statusCode** is the status code to respond with.  (This works just like [status codes in Sails/Node](http://sailsjs.org/documentation/reference/response-res/res-status)).
 
-**viewTemplatePath** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view".
+**viewTemplatePath** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view". (This works just like [views in Sails/Express](http://sailsjs.org/documentation/concepts/views)).
  
 If any of the above are not set explicitly, they will fall back to reasonable defaults.
 

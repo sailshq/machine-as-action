@@ -15,9 +15,9 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *
  * Build a conventional controller action (i.e. route handling function)
  * from a machine definition.  This wraps the machine in a function which
- * negotiates exits to the appropriate response method (e.g. res.negotiate)
- * and passes in all of the request parameters as inputs, as well as a few
- * other useful properties on `env` including:
+ * negotiates exits to the appropriate response behavior, and passes in all
+ * of the request parameters as inputs, as well as a few other useful properties
+ * on `env` including:
  *  • req
  *  • res
  *
@@ -426,15 +426,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                       then `machine-as-action` will refuse to rig this machine.
     //
     //  (7) ERROR:         Handle an error with an appropriate response.
-    //  /\                 - Useful exclusively for error handling.  This just calls res.negotiate()
+    //  /\                 - Useful exclusively for error handling.  This just calls res.serverError()
     //  || warning:          and passes through the output.  If there is no output, it generates a
     //  || this will not     nicer error message and sends that through instead.
-    //  || necessarily be  - If this is a Sails app, this error response type could call at least three different
-    //  || available for     views (404.ejs, 403.ejs, or 500.ejs), depending on the `status` property of whatever
-    //  || exits other than  Error instance `res.negotiate()` ends up with.
-    //     `error` exits.  - Note that, if the requesting user-agent is accessing the route from a browser,
-    //                       its headers give it away.  The "error" response implements content
-    //                       negotiation-- if a user-agent clearly accessed the "error" response by typing in the URL
+    //  || necessarily be  - If this is a Sails app, the server error response method in `api/responses/`
+    //  || available for     will be used, and in some cases it will render the default error page (500.ejs)
+    //  || exits other     - Note that, if the requesting user-agent is accessing the route from a browser,
+    //     than `error`      its headers give it away.  The "error" response implements content negotiation--
+    //     exits.            if a user-agent clearly accessed the "error" response by typing in the URL
     //                       of a web browser, then it should see an error page (which error page depends on the output).
     //                       Alternately, if the same exact parameters were sent to the same exact URL,
     //                       but via AJAX or cURL, we would receive a JSON response instead.
@@ -497,16 +496,16 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         switch (responses[exitCodeName].responseType) {
 
           case 'error':
-            if (!res.negotiate) {
-              return res.send(500, '`machine-as-action` requires `res.negotiate()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+            if (!res.serverError) {
+              return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
             }
-            // Use our output as the argument to `res.negotiate()`.
+            // Use our output as the argument to `res.serverError()`.
             var catchallErr = output;
             // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
             if (_.isUndefined(output)) {
               catchallErr = new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
             }
-            return res.negotiate(catchallErr);
+            return res.serverError(catchallErr);
 
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
           // Currently here strictly for backwards compatibility-
@@ -572,10 +571,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
           default:
-            if (!res.negotiate) {
+            if (!res.serverError) {
               return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
             }
-            return res.negotiate(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
+            return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
         }
       };
     });
