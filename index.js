@@ -39,7 +39,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       {
  *                         success: {
  *                           responseType: 'view',       // (view|redirect|standard)
- *                           viewPath: 'pages/homepage', // (only relevant if `responseType` is "view")
+ *                           viewTemplatePath: 'pages/homepage', // (only relevant if `responseType` is "view")
  *                           statusCode: 204             // any valid HTTP status code
  *                         }
  *                       }
@@ -493,7 +493,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           }
           // Otherwise if this is a view response, include the view path.
           else if (responseInfo.responseType === 'view') {
-            res.set('X-Exit-View-Path', responseInfo.viewPath);
+            res.set('X-Exit-View-Path', responseInfo.viewTemplatePath);
           }
         }
 
@@ -571,7 +571,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
             }
             res.statusCode = responses[exitCodeName].statusCode;
-            return res.view(responses[exitCodeName].viewPath, output);
+            return res.view(responses[exitCodeName].viewTemplatePath, output);
 
 
           default:

@@ -56,10 +56,10 @@ module.exports = function normalizeResponses (configuredResponses, exits){
         throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', exitDef.statusCode, exitCodeName));
       }
     }
-    // View path (`viewPath`)
-    if (!_.isUndefined(exitDef.viewPath)) {
-      if (!_.isString(exitDef.viewPath)) {
-        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view path ("%s") specified for exit "%s".', exitDef.viewPath, exitCodeName));
+    // View path (`viewTemplatePath`)
+    if (!_.isUndefined(exitDef.viewTemplatePath)) {
+      if (!_.isString(exitDef.viewTemplatePath)) {
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view path ("%s") specified for exit "%s".', exitDef.viewTemplatePath, exitCodeName));
       }
     }
 
@@ -125,7 +125,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     }
 
     // Log warning if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
-    if (exitDef.viewPath && exitDef.responseType !== 'view') {
+    if (exitDef.viewTemplatePath && exitDef.responseType !== 'view') {
       console.error('Warning: unnecessary `view` response metadata provided for an exit which is not configured to respond with a view (actual responseType => "%s").', exitDef.responseType);
     }
 
