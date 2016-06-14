@@ -75,14 +75,14 @@ module.exports = {
 For each of your exits, you can optionally specify a `responseType`, `status`, and/or `view`.
 
 **responseType** is one of the following:
- + standard (exit output depends on the context: this might send plain text, download a file, transmit data as JSON, or send no response body at all.)
- + view     (render and respond with a view; exit output will be provided as view locals)
- + redirect (redirect to the URL returned as the exit output)
- + error    (use `res.negotiate()` to send the appropriate default error response based on the exit output)
+ + ""         (the standard response:  Determine an appropriate response based on context: this might send plain text, download a file, transmit data as JSON, or send no response body at all.)
+ + "view"     (render and respond with a view; exit output will be provided as view locals)
+ + "redirect" (redirect to the URL returned as the exit output)
+ + "error"    (use `res.negotiate()` to send the appropriate default error response based on the exit output)
 
-**status** is the status code to respond with.
+**statusCode** is the status code to respond with.
 
-**view** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view".
+**viewTemplatePath** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view".
  
 If any of the above are not set explicitly, they will fall back to reasonable defaults.
 

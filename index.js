@@ -38,7 +38,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                       e.g.
  *                       {
  *                         success: {
- *                           responseType: 'view',       // (view|redirect|standard)
+ *                           responseType: 'view',       // ("view"|"redirect"|"")
  *                           viewTemplatePath: 'pages/homepage', // (only relevant if `responseType` is "view")
  *                           statusCode: 204             // any valid HTTP status code
  *                         }
@@ -116,8 +116,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
   machineDef = _.extend({
-    // TODO: mash up friendly name into a valid identity for the sake of consistent error msgs
-    identity: machineDef.friendlyName||'anonymous-action',
+    identity: machineDef.friendlyName ? _.kebabCase(machineDef.friendlyName) : 'anonymous-action',
     inputs: {},
     exits: {},
   },machineDef);
@@ -317,9 +316,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  || nice-to-have      e.g. after successfully updating a resource like `PUT /discoparty/7`.
     //  || like plaintext  - The status code and any response headers will still be sent.
     //  || kinda advanced  - Even if the machine exit returns any output, it will be ignored.
-    // (can use "STANDARD"
-    //  to achieve same
-    //            effect)
+    // (can use "" (aka standard) to achieve same effect)
     //
     //  (2) PLAIN TEXT:    Send plain text.
     //                     - Useful for sending raw data in a format like CSV or XML.
@@ -327,7 +324,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  || prbly wont be    response body. Custom response headers like "Content-Type" can be sent
     //  || implemented      using `env.res.set()` or mp-headers.  For more info, see "FILE" below.
     //  since you can just - If the exit does not guarantee a *STRING* output, then `machine-as-action`
-    //  use "STANDARD" to    will refuse to rig this machine.
+    //  use "" to            will refuse to rig this machine.
     //  achieve the same
     //  effect.
     //
@@ -338,14 +335,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //  || nice-to-have      using AJAX (whether over HTTP or WebSockets), other API servers, and
     //  || but generally     pretty much anything else you can imagine.
     //  || achieveable w/  - The output from the machine exit will be stringified before it is sent
-    //  || "STANDARD".       as the response body, so it must be JSON-compatible in the eyes of the
+    //  || "".               as the response body, so it must be JSON-compatible in the eyes of the
     //  || Like plain text,  machine spec (i.e. lossless across JSON serialization and without circular
     //  || kinda advanced.   references).
     //  ||                 - That is, if the exit's output example contains any lamda (`->`) or
     //                       ref (`===`) hollows, `machine-as-action` will refuse to rig this machine.
     //
     //
-    //  (4) STANDARD:      Send a response as versatile as you.
+    //  (4) "" (STANDARD): Send a response as versatile as you.
     //                     - Depending on the context, this might send plain text, download a file,
     //                       transmit data as JSON, or send no response body at all.
     //                     - Note that any response headers you might want to use such as `content-type`
@@ -483,7 +480,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           }
           // Only include output headers if there _is_ output and
           // this is a standard response:
-          if (responseInfo.responseType === 'standard' && !_.isUndefined(output)) {
+          if (responseInfo.responseType === '' && !_.isUndefined(output)) {
             if (responseInfo.outputFriendlyName) {
               res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
             }
@@ -515,7 +512,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           // Currently here strictly for backwards compatibility-
           // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'status':
-            console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `standard` instead.');
+            console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
             return res.send(responses[exitCodeName].statusCode);
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -523,12 +520,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           // Currently here strictly for backwards compatibility-
           // this response type may be removed (or more likely have its functionality tweaked) in a future release:
           case 'json':
-            console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `standard` instead.');
+            console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
             return res.json(responses[exitCodeName].statusCode, output);
           ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-          case 'standard':
+          case '':
             // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
             //   but we're careful to not USE that data if we understood the exit to be null)
             var exitDef = wetMachine.exits[exitCodeName];

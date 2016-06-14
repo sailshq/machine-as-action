@@ -40,12 +40,26 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       _.extend(exitDef, configuredResponses[exitCodeName]);
     }
 
+    // Backwards compatibility:
+    //
+    // • `view` (=> `viewTemplatePath`)
+    if (!_.isUndefined(exitDef.view)) {
+      console.warn('Deprecated: `view` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.');
+      exitDef.viewTemplatePath = exitDef.view;
+    }
+    // • `viewPath` (=> `viewTemplatePath`)
+    else if (!_.isUndefined(exitDef.viewPath)) {
+      console.warn('Deprecated: `viewPath` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.');
+      exitDef.viewTemplatePath = exitDef.viewPath;
+    }
+
+
     // If response metadata was explicitly defined, use it.
     // (also validate each property on the way in to ensure it is valid)
     //
     // Response type (`responseType`)
     if (!_.isUndefined(exitDef.responseType)) {
-      if (!_.contains(['standard', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
+      if (!_.contains(['', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
         throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName));
       }
     }
@@ -70,14 +84,14 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     //  static exit definition, not the runtime output value.)
 
 
-    // If `responseType` is not set, we assume it must be `standard`
+    // If `responseType` is not set, we assume it must be `` (standard)
     // unless this is the error exit, in which case we assume it must be `error`.
-    if (!exitDef.responseType) {
+    if (_.isUndefined(exitDef.responseType)) {
       if (exitCodeName === 'error') {
         exitDef.responseType = 'error';
       }
       else {
-        exitDef.responseType = 'standard';
+        exitDef.responseType = ''; // ("" <=> standard)
       }
     }
 
