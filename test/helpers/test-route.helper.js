@@ -16,6 +16,8 @@ var asAction = require('../..');
 module.exports = function testRoute(label, opts, testFn){
   var app = setupLifecycle();
   describe(label, function (){
+    this.timeout(5000);
+
     it('should respond as expected', function (done) {
       return sendRequest(app, opts, function (err, resp, body) {
         return testFn(err, resp, body, done);
