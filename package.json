@@ -16,14 +16,14 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "lodash": "^3.8.0",
-    "machine": "^10.0.0",
-    "rttc": "^9.3.0",
-    "streamifier": "^0.1.1"
+    "lodash": "3.10.1",
+    "machine": "^12.2.4",
+    "rttc": "^9.7.0",
+    "streamifier": "0.1.1"
   },
   "devDependencies": {
-    "mocha": "^2.2.4",
-    "sails": "^0.11.0"
+    "mocha": "2.5.3",
+    "sails": "^0.12.3"
   },
   "repository": {
     "type": "git",
