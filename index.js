@@ -59,6 +59,7 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     [ 'avatar' ]
  *
  *
+ *
  *           @optional {String} urlWildcardSuffix
  *                     if '' or unspecified, then there is no wildcard suffix.  Otherwise,
  *                     this is the code name of the machine input which is being referenced
@@ -85,6 +86,10 @@ var normalizeResponses = require('./helpers/normalize-responses');
  *                     (i.e. when process.env.NODE_ENV === 'production') or when they
  *                     are not relevant.
  *                     @default false
+ *
+ *           @optional {Number} simulateLatency
+ *                     if set, then simulate a latency of the specified number of milliseconds (e.g. 500)
+ *                     @default 0
  *
  *
  * -OR-
@@ -113,6 +118,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   else {
     machineDef = (optsOrMachineDef||{}).machine || {};
   }
+
+  // Default options:
+  _.defaults(optsOrMachineDef, {
+    simulateLatency: 0
+  });
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
   machineDef = _.extend({
@@ -454,129 +464,136 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         if (alreadyExited) return;
         alreadyExited = true;
 
-        // Unless being prevented with the `disableXExitHeader` option,
-        // encode exit code name as the `X-Exit` response header.
-        if (!optsOrMachineDef.disableXExitHeader) {
-          res.set('X-Exit', exitCodeName);
-        }
+        (function _waitForSimulatedLatencyIfRelevant(_cb){
+          if (!optsOrMachineDef.simulateLatency) { return _cb(); }
+          setTimeout(_cb, optsOrMachineDef.simulateLatency);
+        })(function afterwards(){
 
-        // Unless the NODE_ENV environment variable is set to `production`,
-        // or this has been manually disabled, send down all other available
-        // metadata about the exit for use during development.
-        if ( !process.env.NODE_ENV.match(/production/i) && !optsOrMachineDef.disableDevelopmentHeaders) {
-          var responseInfo = responses[exitCodeName];
-          if (responseInfo.friendlyName) {
-            res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
+          // Unless being prevented with the `disableXExitHeader` option,
+          // encode exit code name as the `X-Exit` response header.
+          if (!optsOrMachineDef.disableXExitHeader) {
+            res.set('X-Exit', exitCodeName);
           }
-          if (responseInfo.description) {
-            res.set('X-Exit-Description', responseInfo.description);
-          }
-          if (responseInfo.extendedDescription) {
-            res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
-          }
-          if (responseInfo.moreInfoUrl) {
-            res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
-          }
-          // Only include output headers if there _is_ output and
-          // this is a standard response:
-          if (responseInfo.responseType === '' && !_.isUndefined(output)) {
-            if (responseInfo.outputFriendlyName) {
-              res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+
+          // Unless the NODE_ENV environment variable is set to `production`,
+          // or this has been manually disabled, send down all other available
+          // metadata about the exit for use during development.
+          if ( !process.env.NODE_ENV.match(/production/i) && !optsOrMachineDef.disableDevelopmentHeaders) {
+            var responseInfo = responses[exitCodeName];
+            if (responseInfo.friendlyName) {
+              res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
             }
-            if (responseInfo.outputDescription) {
-              res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+            if (responseInfo.description) {
+              res.set('X-Exit-Description', responseInfo.description);
+            }
+            if (responseInfo.extendedDescription) {
+              res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
+            }
+            if (responseInfo.moreInfoUrl) {
+              res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
+            }
+            // Only include output headers if there _is_ output and
+            // this is a standard response:
+            if (responseInfo.responseType === '' && !_.isUndefined(output)) {
+              if (responseInfo.outputFriendlyName) {
+                res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+              }
+              if (responseInfo.outputDescription) {
+                res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+              }
+            }
+            // Otherwise if this is a view response, include the view path.
+            else if (responseInfo.responseType === 'view') {
+              res.set('X-Exit-View-Path', responseInfo.viewTemplatePath);
             }
           }
-          // Otherwise if this is a view response, include the view path.
-          else if (responseInfo.responseType === 'view') {
-            res.set('X-Exit-View-Path', responseInfo.viewTemplatePath);
-          }
-        }
 
-        switch (responses[exitCodeName].responseType) {
+          switch (responses[exitCodeName].responseType) {
 
-          case 'error':
-            if (!res.serverError) {
-              return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
-            }
-            // Use our output as the argument to `res.serverError()`.
-            var catchallErr = output;
-            // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
-            if (_.isUndefined(output)) {
-              catchallErr = new Error(util.format('Action for route "%s %s" encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
-            }
-            return res.serverError(catchallErr);
+            case 'error':
+              if (!res.serverError) {
+                return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+              }
+              // Use our output as the argument to `res.serverError()`.
+              var catchallErr = output;
+              // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
+              if (_.isUndefined(output)) {
+                catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
+              }
+              return res.serverError(catchallErr);
 
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          // Currently here strictly for backwards compatibility-
-          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-          case 'status':
-            console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-            return res.send(responses[exitCodeName].statusCode);
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-          // Currently here strictly for backwards compatibility-
-          // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-          case 'json':
-            console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-            return res.json(responses[exitCodeName].statusCode, output);
-          ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-          case '':
-            // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
-            //   but we're careful to not USE that data if we understood the exit to be null)
-            var exitDef = wetMachine.exits[exitCodeName];
-            if (_.isUndefined(exitDef.example)) {
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // Currently here strictly for backwards compatibility-
+            // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+            case 'status':
+              console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
               return res.send(responses[exitCodeName].statusCode);
-            }
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-            // • Expecting ref:
-            if (exitDef.example === '===') {
-              // • Readable stream
-              if (output instanceof Readable) {
-                res.status(responses[exitCodeName].statusCode);
-                return output.pipe(res);
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // Currently here strictly for backwards compatibility-
+            // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+            case 'json':
+              console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+              return res.json(responses[exitCodeName].statusCode, output);
+            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+            case '':
+              // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
+              //   but we're careful to not USE that data if we understood the exit to be null)
+              var exitDef = wetMachine.exits[exitCodeName];
+              if (_.isUndefined(exitDef.example)) {
+                return res.send(responses[exitCodeName].statusCode);
               }
-              // • Buffer
-              else if (output instanceof Buffer) {
-                res.status(responses[exitCodeName].statusCode);
-                return Streamifier.createReadStream(output).pipe(res);
+
+              // • Expecting ref:
+              if (exitDef.example === '===') {
+                // • Readable stream
+                if (output instanceof Readable) {
+                  res.status(responses[exitCodeName].statusCode);
+                  return output.pipe(res);
+                }
+                // • Buffer
+                else if (output instanceof Buffer) {
+                  res.status(responses[exitCodeName].statusCode);
+                  return Streamifier.createReadStream(output).pipe(res);
+                }
+                // • else just continue on to our JSON catch-all below
               }
-              // • else just continue on to our JSON catch-all below
-            }
 
-            // • Anything else:  (i.e. JSON / rttc.dehydrate())
-            return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
+              // • Anything else:  (i.e. JSON / rttc.dehydrate())
+              return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
 
 
-          case 'redirect':
-            // If `res.redirect()` is missing, we have to complain.
-            // (but if this is a Sails app and this is a Socket request, let the framework handle it)
-            if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
-              throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
-            }
-            return res.redirect(responses[exitCodeName].statusCode, output);
+            case 'redirect':
+              // If `res.redirect()` is missing, we have to complain.
+              // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+              if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
+                throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
+              }
+              return res.redirect(responses[exitCodeName].statusCode, output);
 
 
-          case 'view':
-            // If `res.view()` is missing, we have to complain.
-            // (but if this is a Sails app and this is a Socket request, let the framework handle it)
-            if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
-              throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
-            }
-            res.statusCode = responses[exitCodeName].statusCode;
-            return res.view(responses[exitCodeName].viewTemplatePath, output);
+            case 'view':
+              // If `res.view()` is missing, we have to complain.
+              // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+              if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
+                throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
+              }
+              res.statusCode = responses[exitCodeName].statusCode;
+              return res.view(responses[exitCodeName].viewTemplatePath, output);
 
 
-          default:
-            if (!res.serverError) {
-              return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
-            }
-            return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
-        }
-      };
+            default:
+              if (!res.serverError) {
+                return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
+              }
+              return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
+          }//</switch>
+        });//</after: waitForSimulatedLatencyIfRelevant>
+
+      };//</respondApropos>
     });
 
     // Then attach them and `.exec()` the machine.
