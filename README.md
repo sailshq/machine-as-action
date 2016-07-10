@@ -105,7 +105,7 @@ module.exports = {
     machine: {
       inputs: {
         photo: {
-          example: '*',
+          example: '===',
           required: true
         }
       },
