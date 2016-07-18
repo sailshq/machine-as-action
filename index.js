@@ -504,7 +504,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             }
             // Otherwise if this is a view response, include the view path.
             else if (responseInfo.responseType === 'view') {
-              res.set('X-Exit-View-Path', responseInfo.viewTemplatePath);
+              res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
             }
           }
 

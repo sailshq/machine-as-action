@@ -326,13 +326,14 @@ testRoute('customizing success exit to do a redirect should work', {
   responses: {
     success: {
       responseType: 'redirect',
-      example: 'http://whatever.com'
+      example: 'http://whatever.com',
+      statusCode: 301
     }
   }
 }, function (err, resp, body, done){
   if (err) return done(err);
-  if (resp.statusCode !== 302) {
-    return done(new Error('Should have responded with a 302 status code (instead got '+resp.statusCode+')'));
+  if (resp.statusCode !== 301) {
+    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
   }
   if (resp.headers.location !== 'http://google.com') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
