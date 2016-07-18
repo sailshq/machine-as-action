@@ -131,6 +131,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     exits: {},
   },machineDef);
 
+  console.log('machine def has fn?', machineDef.fn);
+
   // If no `fn` was provided, dynamically build a stub fn that always responds with `success`,
   // using the `example` as output data, if one was specified.
   if (!machineDef.fn) {
@@ -461,7 +463,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
         // This spinlock protects against the machine calling more than one
         // exit, or the same exit twice.
-        if (alreadyExited) return;
+        if (alreadyExited) { return; }
         alreadyExited = true;
 
         (function _waitForSimulatedLatencyIfRelevant(_cb){
@@ -572,6 +574,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
                 throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
               }
+              console.log('res.redirect('+responses[exitCodeName].statusCode+', '+output+')');
               return res.redirect(responses[exitCodeName].statusCode, output);
 
 
