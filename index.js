@@ -9,6 +9,8 @@ var Streamifier = require('streamifier');
 var rttc = require('rttc');
 var Machine = require('machine');
 var normalizeResponses = require('./helpers/normalize-responses');
+var getOutputExample = require('./helpers/get-output-example');
+
 
 /**
  * machine-as-action
@@ -136,21 +138,27 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     identity: machineDef.friendlyName ? _.kebabCase(machineDef.friendlyName) : 'anonymous-action',
     inputs: {},
     exits: {},
-  },machineDef);
+  }, machineDef);
 
   console.log('machine def has fn?', machineDef.fn);
 
   // If no `fn` was provided, dynamically build a stub fn that always responds with `success`,
   // using the `example` as output data, if one was specified.
   if (!machineDef.fn) {
-    machineDef.fn = function (inputs, exits, env){
+    machineDef.fn = function (inputs, exits, env) {
 
       // Set a header to as a debug flag indicating this is just a stub.
       env.res.set('X-Stub', machineDef.identity);
 
+      // Look up the output example for the success exit.
+      var successExitOutputExample = getOutputExample({
+        machineDef: machineDef,
+        exitCodeName: 'success'
+      });
+
       // Then exit success, using the output example (if relevant)
-      if (_.isObject(machineDef.exits.success) && !_.isUndefined(machineDef.exits.success.example)) {
-        return exits.success(machineDef.exits.success.example);
+      if (!_.isUndefined(successExitOutputExample)) {
+        return exits.success(successExitOutputExample);
       }
       // If there's no output example, just exit void.
       else {
@@ -171,6 +179,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // be cached so it does not need to be recomputed again and again at runtime with each incoming
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
   var responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+  wetMachine.exits = responses;
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
   // for `options.responses`, it will be irreversibly modified.  Also the exits in the
   // machine definition will be irreversibly modified.
@@ -551,13 +560,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             case '':
               // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
               //   but we're careful to not USE that data if we understood the exit to be null)
-              var exitDef = wetMachine.exits[exitCodeName];
-              if (_.isUndefined(exitDef.example)) {
+
+              var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
+              if (_.isUndefined(outputExample)) {
                 return res.send(responses[exitCodeName].statusCode);
               }
 
               // • Expecting ref:
-              if (exitDef.example === '===') {
+              if (outputExample === '===') {
                 // • Readable stream
                 if (output instanceof Readable) {
                   res.status(responses[exitCodeName].statusCode);

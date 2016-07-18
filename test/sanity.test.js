@@ -14,7 +14,7 @@ testRoute('sanity check (ridiculously simplistic usage should work)', {
     }
   },
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   return done();
 });
 
@@ -38,7 +38,7 @@ testRoute('should be able to access `env.req` and `env.res`', {
     }
   },
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.headers['x-test'] !== 'itworked') {
     return done(new Error('Machine should have been able to set response header (`x-test`) to "itworked"!'));
   }
@@ -61,8 +61,10 @@ testRoute('if exit def + compatible output example is specified, actual result s
     }
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
-  if (body !== 'hello world!') return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+  if (err) { return done(err); }
+  if (body !== 'hello world!') {
+    return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+  }
   return done();
 });
 
@@ -88,8 +90,10 @@ testRoute('if input def + compatible input examples are specified, parameters sh
     x: 'hello world!'
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
-  if (body !== 'hello world!') return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+  if (err) { return done(err); }
+  if (body !== 'hello world!') {
+    return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+  }
   return done();
 });
 
@@ -118,7 +122,7 @@ testRoute('ignore extra parameters', {
     y: 'some value for y'
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (body !== undefined) {
     // NOTE: this is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
     return done(new Error('should have gotten `undefined` as the response body, but instead got: '+util.inspect(body)));
@@ -145,14 +149,14 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
       }
     },
     fn: function (inputs, exits) {
-      if (inputs.x !== undefined) return exits.error();
+      if (inputs.x !== undefined) { return exits.error(); }
       return exits.success();
     }
   },
   params: {
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   return done();
 });
 
@@ -296,7 +300,7 @@ testRoute('customizing success exit to use a special status code in the response
     }
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.statusCode !== 201) {
     return done(new Error('Should have responded with a 201 status code (instead got '+resp.statusCode+')'));
   }
@@ -331,7 +335,7 @@ testRoute('customizing success exit to do a redirect should work', {
     }
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.statusCode !== 301) {
     return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
   }
@@ -393,7 +397,7 @@ testRoute('customizing success exit to do JSON should work', {
     }
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.statusCode !== 200) {
     return done(new Error('Should have responded with a 200 status code (instead got '+resp.statusCode+')'));
   }
@@ -574,7 +578,7 @@ testRoute('`redirect` with custom status code', {
     whatever: {}
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.statusCode !== 301) {
     return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
   }
@@ -612,7 +616,7 @@ testRoute('`redirect` with custom status code', {
     }
   }
 }, function (err, resp, body, done){
-  if (err) return done(err);
+  if (err) { return done(err); }
   if (resp.statusCode !== 301) {
     return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
   }
@@ -650,7 +654,7 @@ testRoute('`redirect` with custom status code', {
 //     whatever: {}
 //   }
 // }, function (err, resp, body, done){
-//   if (err) return done(err);
+//   if (err) { return done(err); }
 //   return done();
 // });
 
@@ -677,7 +681,7 @@ testRoute('`redirect` with custom status code', {
 //     whatever: {}
 //   }
 // }, function (err, resp, body, done){
-//   if (err) return done(err);
+//   if (err) { return done(err); }
 //   if (resp.statusCode !== 205) {
 //     return done(new Error('Should have responded with a 205 status code (instead got '+resp.statusCode+')'));
 //   }

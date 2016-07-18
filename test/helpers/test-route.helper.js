@@ -80,14 +80,15 @@ function setupLifecycle (){
       },
       globals: false
     }, function (err){
-      if (err) return done(err);
-      done();
+      if (err) { return done(err); }
+      else { return done(); }
     });
   });
 
   after(function (done){
-    app.lower(function (){
-      done();
+    app.lower(function (err){
+      if (err) { return done(err); }
+      else { return done(); }
     });
   });
 
