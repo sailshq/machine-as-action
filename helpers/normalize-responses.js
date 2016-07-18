@@ -4,7 +4,7 @@
 
 var util = require('util');
 var _ = require('lodash');
-
+var getOutputExample = require('./get-output-example');
 
 
 /**
@@ -44,12 +44,12 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     //
     // • `view` (=> `viewTemplatePath`)
     if (!_.isUndefined(exitDef.view)) {
-      console.warn('Deprecated: `view` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.');
+      console.warn('Deprecated: `view` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.  (Automatically migrating for you this time.)');
       exitDef.viewTemplatePath = exitDef.view;
     }
     // • `viewPath` (=> `viewTemplatePath`)
     else if (!_.isUndefined(exitDef.viewPath)) {
-      console.warn('Deprecated: `viewPath` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.');
+      console.warn('Deprecated: `viewPath` is no longer supported by `machine-as-action`.  Instead, use `viewTemplatePath`.  (Automatically migrating for you this time.)');
       exitDef.viewTemplatePath = exitDef.viewPath;
     }
 
@@ -67,7 +67,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     if (!_.isUndefined(exitDef.statusCode)) {
       exitDef.statusCode = +exitDef.statusCode;
       if (_.isNaN(exitDef.statusCode) || exitDef.statusCode < 100 || exitDef.statusCode > 599) {
-        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".', exitDef.statusCode, exitCodeName));
+        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".  To have MaA use the default status code, omit the `statusCode` property.', exitDef.statusCode, exitCodeName));
       }
     }
     // View path (`viewTemplatePath`)
@@ -107,33 +107,36 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       else if (exitDef.responseType === 'redirect') {
         exitDef.statusCode = 302;
       }
-      // Otherwise, if this is a view OR it's the success exit:
-      // `200` (view)  -OR-  (success exit)
-      else if (exitDef.responseType === 'view' || exitCodeName === 'success') {
+      // Otherwise, if this is the success exit:
+      // `200` (success exit)
+      else if (exitCodeName === 'success') {
         exitDef.statusCode = 200;
       }
       // Otherwise... well, this must be some other exit besides success and error
-      // and it must not be doing a redirect or serving a view:
-      // `500` (any other exit besides success)
+      // and it must not be doing a redirect, so use:
+      // `500` (misc)
       else {
         exitDef.statusCode = 500;
       }
     }
 
+    // Look up the output example for this exit.
+    var outputExample = getOutputExample({ exitDef: exitDef });
+
     // Ensure response type is compatible with exit definition
     if (exitDef.responseType === 'redirect') {
-      if (!_.isUndefined(exitDef.example) && !_.isString(exitDef.example)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitCodeName,util.inspect(exitDef.example, false, null)));
+      if (!_.isUndefined(outputExample) && !_.isString(outputExample)) {
+        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitCodeName,util.inspect(outputExample, false, null)));
       }
     }
     else if (exitDef.responseType === 'view') {
-      if (!_.isUndefined(exitDef.example) && !_.isPlainObject(exitDef.example)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(exitDef.example, false, null)));
+      if (!_.isUndefined(outputExample) && !_.isPlainObject(outputExample)) {
+        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)));
       }
     }
     else if (exitDef.responseType === 'json') {
       // ** NOTE THAT THE `json` RESPONSE TYPE IS DEPRECATED **
-      if (!_.isUndefined(exitDef.example) && _.isUndefined(exitDef.example)) {
+      if (!_.isUndefined(outputExample) && _.isUndefined(outputExample)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitCodeName));
       }
     }
