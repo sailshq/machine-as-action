@@ -110,17 +110,24 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
   optsOrMachineDef = optsOrMachineDef||{};
 
-  // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the machine definition
+  // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the node machine definition
   var machineDef;
-  if (!_.isObject(optsOrMachineDef.machine)) {
-    machineDef = optsOrMachineDef || {};
+  var options;
+  // If a `machine` property was specified, then that is our node machine definition,
+  // and whatever's left after omitting the `machine` property is our options.
+  if (_.isObject(optsOrMachineDef.machine)) {
+    machineDef = optsOrMachineDef.machine;
+    options = _.omit(optsOrMachineDef, 'machine');
   }
+  // Otherwise, the entire `optsOrMachineDef` dictionary is our node machine def,
+  // and there are no other options.
   else {
-    machineDef = (optsOrMachineDef||{}).machine || {};
+    machineDef = optsOrMachineDef;
+    options = {};
   }
 
-  // Default options:
-  _.defaults(optsOrMachineDef, {
+  // Set up default options:
+  options = _.defaults(options, {
     simulateLatency: 0
   });
 
@@ -163,9 +170,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // them with the exit definitions of the machine to build a normalized response mapping that will
   // be cached so it does not need to be recomputed again and again at runtime with each incoming
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
-  var responses = normalizeResponses(optsOrMachineDef.responses || {}, wetMachine.exits);
+  var responses = normalizeResponses(options.responses || {}, wetMachine.exits);
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
-  // for `optsOrMachineDef.responses`, it will be irreversibly modified.  Also the exits in the
+  // for `options.responses`, it will be irreversibly modified.  Also the exits in the
   // machine definition will be irreversibly modified.
 
 
@@ -257,8 +264,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       // Note that we compare against the code name in the input definition.  The `urlWildcardSuffix` provided to
       // machine-as-action should reference the c-input by code name, not by any other sort of ID (i.e. if you are
       // using a higher-level immutable ID abstraction, rewrite the urlWildcardSuffix to the code name beforehand)
-      if (optsOrMachineDef.urlWildcardSuffix &&
-        optsOrMachineDef.urlWildcardSuffix === inputCodeName ) {
+      if (options.urlWildcardSuffix &&
+        options.urlWildcardSuffix === inputCodeName ) {
         memo[inputCodeName] = req.param('0');
       }
       // Otherwise, this is just your standard, run of the mill parameter.
@@ -272,11 +279,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
     // Handle `files` option (to provide access to upstreams)
-    if (_.isArray(optsOrMachineDef.files)) {
+    if (_.isArray(options.files)) {
       if (!req.file) {
         throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
       }
-      _.each(optsOrMachineDef.files, function (fileParamName){
+      _.each(options.files, function (fileParamName){
         // Supply this upstream as an argument for the specified input.
         argins[fileParamName] = req.file(fileParamName);
         // Also bind an `error` event so that, if the machine's implementation (`fn`)
@@ -467,20 +474,20 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         alreadyExited = true;
 
         (function _waitForSimulatedLatencyIfRelevant(_cb){
-          if (!optsOrMachineDef.simulateLatency) { return _cb(); }
-          setTimeout(_cb, optsOrMachineDef.simulateLatency);
+          if (!options.simulateLatency) { return _cb(); }
+          setTimeout(_cb, options.simulateLatency);
         })(function afterwards(){
 
           // Unless being prevented with the `disableXExitHeader` option,
           // encode exit code name as the `X-Exit` response header.
-          if (!optsOrMachineDef.disableXExitHeader) {
+          if (!options.disableXExitHeader) {
             res.set('X-Exit', exitCodeName);
           }
 
           // Unless the NODE_ENV environment variable is set to `production`,
           // or this has been manually disabled, send down all other available
           // metadata about the exit for use during development.
-          if ( !process.env.NODE_ENV.match(/production/i) && !optsOrMachineDef.disableDevelopmentHeaders) {
+          if ( !process.env.NODE_ENV.match(/production/i) && !options.disableDevelopmentHeaders) {
             var responseInfo = responses[exitCodeName];
             if (responseInfo.friendlyName) {
               res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
