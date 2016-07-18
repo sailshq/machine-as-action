@@ -286,12 +286,12 @@ testRoute('customizing success exit to use a special status code in the response
       }
     },
     fn: function (inputs, exits) {
-      return exits.success('STUFF AND THINGS');
+      return exits.success();
     }
   },
   responses: {
     success: {
-      responseType: 'status',
+      responseType: '',
       statusCode: 201
     }
   }
@@ -325,7 +325,8 @@ testRoute('customizing success exit to do a redirect should work', {
   },
   responses: {
     success: {
-      responseType: 'redirect'
+      responseType: 'redirect',
+      example: 'http://whatever.com'
     }
   }
 }, function (err, resp, body, done){
@@ -334,6 +335,36 @@ testRoute('customizing success exit to do a redirect should work', {
     return done(new Error('Should have responded with a 302 status code (instead got '+resp.statusCode+')'));
   }
   if (resp.headers.location !== 'http://google.com') {
+    return done(new Error('Should have sent the appropriate "Location" response header'));
+  }
+  return done();
+});
+
+
+
+testRoute('redirecting should work, even without specifying a status code or output example', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        example: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('/foo/bar');
+    }
+  },
+  responses: {
+    success: {
+      responseType: 'redirect'
+    }
+  }
+}, function (err, resp, body, done){
+  if (err) { return done(err); }
+  if (resp.statusCode !== 302) {
+    return done(new Error('Should have responded with a 302 status code (instead got '+resp.statusCode+')'));
+  }
+  if (resp.headers.location !== '/foo/bar') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
   }
   return done();
@@ -357,7 +388,7 @@ testRoute('customizing success exit to do JSON should work', {
   },
   responses: {
     success: {
-      responseType: 'json'
+      responseType: ''
     }
   }
 }, function (err, resp, body, done){
@@ -389,7 +420,7 @@ testRoute('exits other than success should default to status code 500', {
   },
   responses: {
     success: {
-      responseType: 'json'
+      responseType: ''
     }
   }
 }, function (err, resp, body, done){
@@ -422,15 +453,18 @@ testRoute('exits other than success can have their status codes overriden too', 
   },
   responses: {
     success: {
-      responseType: 'json'
+      responseType: ''
     },
     whatever: {
-      responseType: 'status',
+      responseType: '',
       statusCode: 204
     }
   }
 }, function (err, resp, body, done){
-  if (err) { console.log(err.status); return done(err); }
+  if (err) {
+    console.log(err.status);
+    return done(err);
+  }
   if (resp.statusCode !== 204) {
     return done(new Error('Should have responded with status code 204 (but instead got status code '+resp.statusCode+')'));
   }
@@ -462,7 +496,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
   },
   responses: {
     success: {
-      responseType: 'json'
+      responseType: ''
     },
     whatever: {
       statusCode: 204

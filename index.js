@@ -594,7 +594,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         });//</after: waitForSimulatedLatencyIfRelevant>
 
       };//</respondApropos>
-    });
+    });//</each exit>
 
     // Then attach them and `.exec()` the machine.
     return liveMachine.exec(callbacks);
