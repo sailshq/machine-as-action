@@ -140,8 +140,6 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     exits: {},
   }, machineDef);
 
-  console.log('machine def has fn?', machineDef.fn);
-
   // If no `fn` was provided, dynamically build a stub fn that always responds with `success`,
   // using the `example` as output data, if one was specified.
   if (!machineDef.fn) {
@@ -591,8 +589,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
                 throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
               }
-              console.log('res.redirect('+responses[exitCodeName].statusCode+', '+output+')');
-              return res.redirect(responses[exitCodeName].statusCode, output);
+              if (_.isUndefined(output)) {
+                return res.redirect(responses[exitCodeName].statusCode);
+              }
+              else {
+                return res.redirect(responses[exitCodeName].statusCode, output);
+              }
+              break;
 
 
             case 'view':
@@ -602,7 +605,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
               }
               res.statusCode = responses[exitCodeName].statusCode;
-              return res.view(responses[exitCodeName].viewTemplatePath, output);
+              if (_.isUndefined(output)) {
+                return res.view(responses[exitCodeName].viewTemplatePath);
+              }
+              else {
+                return res.view(responses[exitCodeName].viewTemplatePath, output);
+              }
+              break;
 
 
             default:
