@@ -327,7 +327,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     }
 
     // Expose `env` in machine `fn`.
-    liveMachine.setEnvironment(env);
+    liveMachine.setEnv(env);
 
 
 
