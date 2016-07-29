@@ -523,7 +523,79 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
             }
           }
+          // >-
 
+
+          // If this is the handler for the error exit, and it's clear from the output
+          // that this is a runtime validation error _from this specific machine_ (and
+          // not from any machines it might call internally in its `fn`), then send back
+          // send back a 400 (using the built-in `badRequest()` response, if it exists.)
+          var isValidationError =
+            exitCodeName === 'error' &&
+            output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
+            output.machineInstance === liveMachine;
+
+          if (isValidationError) {
+            // Sanity check:
+            if (!_.isArray(output.errors)) { throw new Error('Consistency violation: E_MACHINE_RUNTIME_VALIDATION errors should _always_ have an `errors` array.'); }
+
+            // Build a new error w/ more specific verbiage.
+            // (stack trace is more useful starting from here anyway)
+            var prettyPrintedValidationErrorsStr = _.map(output.errors, function (rttcValidationErr){
+              return '  • '+rttcValidationErr.message;
+            }).join('\n');
+            var baseValidationErrMsg =
+            'Received incoming request (`'+req.method+' '+req.path+'`), '+
+            'but could not run action (`'+machineDef.identity+'`) '+
+            'due to '+output.errors.length+' missing or invalid '+
+            'parameter'+(output.errors.length>1?'s':'');
+            var err = new Error(baseValidationErrMsg+':\n'+prettyPrintedValidationErrorsStr);
+            err.code = 'E_MISSING_OR_INVALID_PARAMS';
+            err.errors = output.errors;
+
+            // Attach a toJSON function to the error.  This will be run automatically
+            // when this error is being stringified.  This is our chance to make this
+            // error easier to read/programatically parse from the client.
+            err.toJson = err.toJSON = function (){
+              // Include the error code and the array of RTTC validation errors
+              // for easy programmatic parsing.
+              var jsonReadyErr = _.pick(err, ['code', 'errors']);
+              // And also include a more front-end-friendly version of the error message.
+              var preamble =
+              'The server could not fulfill this request (`'+req.method+' '+req.path+'`) '+
+              'due to '+output.errors.length+' missing or invalid '+
+              'parameter'+(output.errors.length>1?'s':'')+'.';
+
+              // If NOT running in production, then provide additional details and tips.
+              if (!process.env.NODE_ENV.match(/production/i)) {
+                jsonReadyErr.message = preamble+'  '+
+                '**This message and the following additional information will not '+
+                'be shown in production**:  '+
+                'Tip: Check your client-side code to make sure that the request data it '+
+                'sends matches the expectations of the corresponding parameters in your '+
+                'server-side route/action.  Also check that your client-side code sends '+
+                'data for every required parameter.  Finally, for programmatically-parseable '+
+                'details about each validation error, `.errors`. ';
+              }
+              // If running in production, use a message that is more terse.
+              else {
+                jsonReadyErr.message = preamble;
+              }
+              return jsonReadyErr;
+            };
+
+            // // Now call the `badRequest()` custom response, if it exists.
+            // if (_.isFunction(res.badRequest)) {
+            //   return res.badRequest(err);
+            // }
+            // // Otherwise, just send a 400 response with the error.
+            // else {
+              return res.json(400, err);
+            // }
+          }
+
+
+          // -•
           switch (responses[exitCodeName].responseType) {
 
             case 'error':

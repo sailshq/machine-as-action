@@ -3,13 +3,16 @@
   "version": "5.2.0",
   "description": "Run a machine from an HTTP or WebSocket request.",
   "scripts": {
-    "test": "node ./node_modules/mocha/bin/mocha"
+    "test": "node ./node_modules/mocha/bin/mocha -t 8000"
   },
   "keywords": [
     "machine",
     "action",
+    "controller",
     "sails.js",
+    "sails",
     "blueprint",
+    "request",
     "websocket",
     "http"
   ],
