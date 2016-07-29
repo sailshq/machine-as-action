@@ -556,7 +556,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // Attach a toJSON function to the error.  This will be run automatically
             // when this error is being stringified.  This is our chance to make this
             // error easier to read/programatically parse from the client.
-            err.toJson = err.toJSON = function (){
+            err.toJSON = function (){
               // Include the error code and the array of RTTC validation errors
               // for easy programmatic parsing.
               var jsonReadyErr = _.pick(err, ['code', 'errors']);
