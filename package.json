@@ -1,6 +1,6 @@
 {
   "name": "machine-as-action",
-  "version": "5.2.0",
+  "version": "6.0.0",
   "description": "Run a machine from an HTTP or WebSocket request.",
   "scripts": {
     "test": "node ./node_modules/mocha/bin/mocha -t 8000"
