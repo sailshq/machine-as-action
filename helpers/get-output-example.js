@@ -47,6 +47,9 @@ module.exports = function getOutputExample (options) {
   // Look up the output example:
   if (_.isUndefined(exitDef)) { return undefined; }
   else if (!_.isObject(exitDef)) { throw new Error('Consistency violation: The specified exit (`'+options.exitCodeName+'`) is not a valid exit definition (should be a dictionary).'); }
+  else if (!_.isUndefined(exitDef.like)) { throw new Error('Consistency violation: The specified exit (`'+options.exitCodeName+'`) cannot be used in machine-as-action (`like`, `itemOf`, and `getExample` are not currently supported).'); }
+  else if (!_.isUndefined(exitDef.itemOf)) { throw new Error('Consistency violation: The specified exit (`'+options.exitCodeName+'`) cannot be used in machine-as-action (`like`, `itemOf`, and `getExample` are not currently supported).'); }
+  else if (!_.isUndefined(exitDef.getExample)) { throw new Error('Consistency violation: The specified exit (`'+options.exitCodeName+'`) cannot be used in machine-as-action (`like`, `itemOf`, and `getExample` are not currently supported).'); }
   else if (!_.isUndefined(exitDef.outputExample)) { return exitDef.outputExample; }
   else if (!_.isUndefined(exitDef.example)) { return exitDef.example; }
   else { return undefined; }
