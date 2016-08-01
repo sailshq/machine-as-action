@@ -584,14 +584,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               return jsonReadyErr;
             };
 
-            // // Now call the `badRequest()` custom response, if it exists.
-            // if (_.isFunction(res.badRequest)) {
-            //   return res.badRequest(err);
-            // }
-            // // Otherwise, just send a 400 response with the error.
-            // else {
+            // Now call the `badRequest()` custom response, if it exists.
+            if (_.isFunction(res.badRequest)) {
+              return res.badRequest(err);
+            }
+            // Otherwise, just send a 400 response with the error.
+            else {
               return res.json(400, err);
-            // }
+            }
           }
 
 
