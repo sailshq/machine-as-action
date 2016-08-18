@@ -145,8 +145,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   if (!machineDef.fn) {
     machineDef.fn = function (inputs, exits, env) {
 
-      // Set a header to as a debug flag indicating this is just a stub.
-      env.res.set('X-Stub', machineDef.identity);
+      // This is a generated `fn`.
+      // (Note that this is fine for production in some cases-- e.g. static views.)
 
       // Look up the output example for the success exit.
       var successExitOutputExample = getOutputExample({
@@ -154,14 +154,32 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         exitCodeName: 'success'
       });
 
-      // Then exit success, using the output example (if relevant)
-      if (!_.isUndefined(successExitOutputExample)) {
-        return exits.success(successExitOutputExample);
-      }
-      // If there's no output example, just exit void.
-      else {
+      // If there's no output example, just exit through the success exit w/ no output.
+      // (This is fine for production.  Because static views.)
+      if (_.isUndefined(successExitOutputExample)) {
         return exits.success();
       }
+      // Otherwise, still exit success, but use the output example (i.e. an exemplar)
+      // as fake data.  This will be used as the locals/JSON response/redirect URL.
+      else {
+
+        // But if you're in production, since this would respond with
+        // a stub (i.e. fake data) then log a warning about this happening.
+        // (since you probably don't actually want this to happen)
+        if (process.env.NODE_ENV.match(/production/i)) {
+
+          // Set a header to as a debug flag indicating this is just a stub.
+          env.res.set('X-Stub', machineDef.identity);
+
+          console.warn('Using stub implementation for action (`'+machineDef.identity+'`) because it has no `fn`!\n'+
+          'That means the output sent from this action will be completely fake!  To do this, `machine-as-action` '+
+          'is using the `outputExample` from the success exit and using that as output.\n'+
+          '(This warning is being logged because you are in a production environment according to NODE_ENV)');
+        }
+
+        return exits.success(successExitOutputExample);
+      }
+
 
     };
   }
