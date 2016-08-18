@@ -1,4 +1,5 @@
 var util = require('util');
+var assert = require('assert');
 var _ = require('lodash');
 var testRoute = require('./helpers/test-route.helper');
 
@@ -17,8 +18,6 @@ testRoute('sanity check (ridiculously simplistic usage should work)', {
   if (err) { return done(err); }
   return done();
 });
-
-
 
 
 
@@ -625,6 +624,87 @@ testRoute('`redirect` with custom status code', {
   }
   return done();
 });
+
+
+
+
+
+
+var _loggerRan;
+var _loggerRanWithArgs;
+testRoute('should call `logUnexpectedOutputFn` with expected argument', {
+  logUnexpectedOutputFn: function (unexpectedOutput) {
+    _loggerRan = true;
+    _loggerRanWithArgs = Array.prototype.slice.call(arguments);
+  },
+  machine: {
+    inputs: {},
+    exits: {
+      notFound: {
+        description: 'Something fake happened.  Because this is fake.'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.notFound(new Error('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+    }
+  },
+}, function (err, resp, body, done){
+
+  try {
+    assert(err);
+    assert.equal(err.status, 500);
+  } catch (e) { return done(e); }
+
+  if (!_loggerRan) {
+    return done(new Error('Consistency violation: Should have run custom log function!  (But `_loggerRan` was not true!)'));
+  }
+  if (!_.isArray(_loggerRanWithArgs) || _loggerRanWithArgs.length !== 1) {
+    return done(new Error('Consistency violation: `_loggerRanWithArgs` should be a single-item array!  Maybe the wrong stuff was passed in to the custom log function from inside machine-as-action...'));
+  }
+
+  try {
+    assert(_.isError(_loggerRanWithArgs[0]));
+    assert(_loggerRanWithArgs[0].message.match('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+  } catch (e) { return done(e); }
+
+  return done();
+});
+
+
+
+
+
+
+var _loggerRanButItShouldntHave;
+testRoute('should NOT call `logUnexpectedOutputFn` if no unexpected output is sent', {
+  logUnexpectedOutputFn: function (unexpectedOutput) {
+    _loggerRanButItShouldntHave = true;
+  },
+  machine: {
+    inputs: {},
+    exits: {
+      notFound: {
+        description: 'Something fake happened.  Because this is fake.'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.notFound();
+    }
+  },
+}, function (err, resp, body, done){
+  try {
+    assert(err);
+    assert.equal(err.status, 500);
+  } catch (e) { return done(e); }
+
+  if (_loggerRanButItShouldntHave) {
+    return done(new Error('Consistency violation: Should NOT have run custom log function!'));
+  }
+
+  return done();
+});
+
+
 
 
 

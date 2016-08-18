@@ -694,9 +694,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   // (otherwise `console.warn()`).  We use an overridable log function to do this.
                   if (!_.isUndefined(unexpectedOutput)) {
 
-
                     try {
-                      // If not provided, use custom implementation.
+                      // If provided, use custom implementation.
                       if (!_.isUndefined(options.logUnexpectedOutputFn)) {
                         options.logUnexpectedOutputFn(unexpectedOutput);
                       }
