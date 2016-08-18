@@ -634,7 +634,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // }
             // ```
             // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-          }
+          }//</if :: machine runtime validation error (E_MACHINE_RUNTIME_VALIDATION)>
 
 
           // -•
