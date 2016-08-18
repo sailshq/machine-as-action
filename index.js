@@ -503,237 +503,241 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           if (!options.simulateLatency) { return _cb(); }
           setTimeout(_cb, options.simulateLatency);
         })(function afterwards(){
+          // Use a `try` to be safe, since this callback might be invoked in
+          // an asynchronous execution context.
+          try {
 
-          // Unless being prevented with the `disableXExitHeader` option,
-          // encode exit code name as the `X-Exit` response header.
-          if (!options.disableXExitHeader) {
-            res.set('X-Exit', exitCodeName);
-          }
+            // Unless being prevented with the `disableXExitHeader` option,
+            // encode exit code name as the `X-Exit` response header.
+            if (!options.disableXExitHeader) {
+              res.set('X-Exit', exitCodeName);
+            }
 
-          // Unless the NODE_ENV environment variable is set to `production`,
-          // or this has been manually disabled, send down all other available
-          // metadata about the exit for use during development.
-          if ( !process.env.NODE_ENV.match(/production/i) && !options.disableDevelopmentHeaders) {
-            var responseInfo = responses[exitCodeName];
-            if (responseInfo.friendlyName) {
-              res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
-            }
-            if (responseInfo.description) {
-              res.set('X-Exit-Description', responseInfo.description);
-            }
-            if (responseInfo.extendedDescription) {
-              res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
-            }
-            if (responseInfo.moreInfoUrl) {
-              res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
-            }
-            // Only include output headers if there _is_ output and
-            // this is a standard response:
-            if (responseInfo.responseType === '' && !_.isUndefined(output)) {
-              if (responseInfo.outputFriendlyName) {
-                res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+            // Unless the NODE_ENV environment variable is set to `production`,
+            // or this has been manually disabled, send down all other available
+            // metadata about the exit for use during development.
+            if ( !process.env.NODE_ENV.match(/production/i) && !options.disableDevelopmentHeaders) {
+              var responseInfo = responses[exitCodeName];
+              if (responseInfo.friendlyName) {
+                res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
               }
-              if (responseInfo.outputDescription) {
-                res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+              if (responseInfo.description) {
+                res.set('X-Exit-Description', responseInfo.description);
+              }
+              if (responseInfo.extendedDescription) {
+                res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
+              }
+              if (responseInfo.moreInfoUrl) {
+                res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
+              }
+              // Only include output headers if there _is_ output and
+              // this is a standard response:
+              if (responseInfo.responseType === '' && !_.isUndefined(output)) {
+                if (responseInfo.outputFriendlyName) {
+                  res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+                }
+                if (responseInfo.outputDescription) {
+                  res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+                }
+              }
+              // Otherwise if this is a view response, include the view path.
+              else if (responseInfo.responseType === 'view') {
+                res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
               }
             }
-            // Otherwise if this is a view response, include the view path.
-            else if (responseInfo.responseType === 'view') {
-              res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
-            }
-          }
-          // >-
+            // >-
 
 
-          // If this is the handler for the error exit, and it's clear from the output
-          // that this is a runtime validation error _from this specific machine_ (and
-          // not from any machines it might call internally in its `fn`), then send back
-          // send back a 400 (using the built-in `badRequest()` response, if it exists.)
-          var isValidationError =
-            exitCodeName === 'error' &&
-            output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
-            output.machineInstance === liveMachine;
+            // If this is the handler for the error exit, and it's clear from the output
+            // that this is a runtime validation error _from this specific machine_ (and
+            // not from any machines it might call internally in its `fn`), then send back
+            // send back a 400 (using the built-in `badRequest()` response, if it exists.)
+            var isValidationError =
+              exitCodeName === 'error' &&
+              output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
+              output.machineInstance === liveMachine;
 
-          if (isValidationError) {
-            // Sanity check:
-            if (!_.isArray(output.errors)) { throw new Error('Consistency violation: E_MACHINE_RUNTIME_VALIDATION errors should _always_ have an `errors` array.'); }
+            if (isValidationError) {
+              // Sanity check:
+              if (!_.isArray(output.errors)) { throw new Error('Consistency violation: E_MACHINE_RUNTIME_VALIDATION errors should _always_ have an `errors` array.'); }
 
-            // Build a new error w/ more specific verbiage.
-            // (stack trace is more useful starting from here anyway)
-            var prettyPrintedValidationErrorsStr = _.map(output.errors, function (rttcValidationErr){
-              return '  • '+rttcValidationErr.message;
-            }).join('\n');
-            var baseValidationErrMsg =
-            'Received incoming request (`'+req.method+' '+req.path+'`), '+
-            'but could not run action (`'+machineDef.identity+'`) '+
-            'due to '+output.errors.length+' missing or invalid '+
-            'parameter'+(output.errors.length>1?'s':'');
-            var err = new Error(baseValidationErrMsg+':\n'+prettyPrintedValidationErrorsStr);
-            err.code = 'E_MISSING_OR_INVALID_PARAMS';
-            err.errors = output.errors;
-
-            // Attach a toJSON function to the error.  This will be run automatically
-            // when this error is being stringified.  This is our chance to make this
-            // error easier to read/programatically parse from the client.
-            err.toJSON = function (){
-              // Include the error code and the array of RTTC validation errors
-              // for easy programmatic parsing.
-              var jsonReadyErr = _.pick(err, ['code', 'errors']);
-              // And also include a more front-end-friendly version of the error message.
-              var preamble =
-              'The server could not fulfill this request (`'+req.method+' '+req.path+'`) '+
+              // Build a new error w/ more specific verbiage.
+              // (stack trace is more useful starting from here anyway)
+              var prettyPrintedValidationErrorsStr = _.map(output.errors, function (rttcValidationErr){
+                return '  • '+rttcValidationErr.message;
+              }).join('\n');
+              var baseValidationErrMsg =
+              'Received incoming request (`'+req.method+' '+req.path+'`), '+
+              'but could not run action (`'+machineDef.identity+'`) '+
               'due to '+output.errors.length+' missing or invalid '+
-              'parameter'+(output.errors.length>1?'s':'')+'.';
+              'parameter'+(output.errors.length>1?'s':'');
+              var err = new Error(baseValidationErrMsg+':\n'+prettyPrintedValidationErrorsStr);
+              err.code = 'E_MISSING_OR_INVALID_PARAMS';
+              err.errors = output.errors;
 
-              // If NOT running in production, then provide additional details and tips.
-              if (!process.env.NODE_ENV.match(/production/i)) {
-                jsonReadyErr.message = preamble+'  '+
-                '**This message and the following additional information will not '+
-                'be shown in production**:  '+
-                'Tip: Check your client-side code to make sure that the request data it '+
-                'sends matches the expectations of the corresponding parameters in your '+
-                'server-side route/action.  Also check that your client-side code sends '+
-                'data for every required parameter.  Finally, for programmatically-parseable '+
-                'details about each validation error, `.errors`. ';
-              }
-              // If running in production, use a message that is more terse.
-              else {
-                jsonReadyErr.message = preamble;
-              }
-              return jsonReadyErr;
-            };
+              // Attach a toJSON function to the error.  This will be run automatically
+              // when this error is being stringified.  This is our chance to make this
+              // error easier to read/programatically parse from the client.
+              err.toJSON = function (){
+                // Include the error code and the array of RTTC validation errors
+                // for easy programmatic parsing.
+                var jsonReadyErr = _.pick(err, ['code', 'errors']);
+                // And also include a more front-end-friendly version of the error message.
+                var preamble =
+                'The server could not fulfill this request (`'+req.method+' '+req.path+'`) '+
+                'due to '+output.errors.length+' missing or invalid '+
+                'parameter'+(output.errors.length>1?'s':'')+'.';
 
-
-            // Just send a 400 response with the error encoded as JSON.
-            return res.json(400, err);
-            // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-            // Note:
-            // When Sails v1.0 is released, this (^) will check for `res.badRequest()`,
-            // and call that custom response method instead (if it exists).
-            //
-            // But as of v0.12.4, Sails core marshals this error (e.g. `err`) before
-            // passing it through to `res.badRequest()`.  This dehydrates it, which
-            // is usually not a bad idea.  But it also causes our toJSON() logic to be
-            // skipped.  And that part is kind of lame.
-            //
-            // Unfortunately, changing this in Sails would be one of the more insidious
-            // sorts of breaking changes, and I'm not doing it until we publish the first
-            // major version (v1.0).  So, for the time being, machine-as-action always
-            // calls res.json() directly instead.
-            //
-            // For more information, see:
-            //  • https://github.com/balderdashy/sails/commit/b8c3813281a041c0b24db381b046fecfa81a14b7#commitcomment-18455430
-            //  • http://mikermcneil.com/post/148171019987/sails-v1-first-look
-            //
-            // ```
-            // if (_.isFunction(res.badRequest)) {
-            //   return res.badRequest(err);
-            // }
-            // else {
-            //   return res.json(400, err);
-            // }
-            // ```
-            // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-          }//</if :: machine runtime validation error (E_MACHINE_RUNTIME_VALIDATION)>
+                // If NOT running in production, then provide additional details and tips.
+                if (!process.env.NODE_ENV.match(/production/i)) {
+                  jsonReadyErr.message = preamble+'  '+
+                  '**This message and the following additional information will not '+
+                  'be shown in production**:  '+
+                  'Tip: Check your client-side code to make sure that the request data it '+
+                  'sends matches the expectations of the corresponding parameters in your '+
+                  'server-side route/action.  Also check that your client-side code sends '+
+                  'data for every required parameter.  Finally, for programmatically-parseable '+
+                  'details about each validation error, `.errors`. ';
+                }
+                // If running in production, use a message that is more terse.
+                else {
+                  jsonReadyErr.message = preamble;
+                }
+                return jsonReadyErr;
+              };
 
 
-          // -•
-          switch (responses[exitCodeName].responseType) {
+              // Just send a 400 response with the error encoded as JSON.
+              return res.json(400, err);
+              // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+              // Note:
+              // When Sails v1.0 is released, this (^) will check for `res.badRequest()`,
+              // and call that custom response method instead (if it exists).
+              //
+              // But as of v0.12.4, Sails core marshals this error (e.g. `err`) before
+              // passing it through to `res.badRequest()`.  This dehydrates it, which
+              // is usually not a bad idea.  But it also causes our toJSON() logic to be
+              // skipped.  And that part is kind of lame.
+              //
+              // Unfortunately, changing this in Sails would be one of the more insidious
+              // sorts of breaking changes, and I'm not doing it until we publish the first
+              // major version (v1.0).  So, for the time being, machine-as-action always
+              // calls res.json() directly instead.
+              //
+              // For more information, see:
+              //  • https://github.com/balderdashy/sails/commit/b8c3813281a041c0b24db381b046fecfa81a14b7#commitcomment-18455430
+              //  • http://mikermcneil.com/post/148171019987/sails-v1-first-look
+              //
+              // ```
+              // if (_.isFunction(res.badRequest)) {
+              //   return res.badRequest(err);
+              // }
+              // else {
+              //   return res.json(400, err);
+              // }
+              // ```
+              // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+            }//</if :: machine runtime validation error (E_MACHINE_RUNTIME_VALIDATION)>
 
-            case 'error':
-              if (!res.serverError) {
-                return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
-              }
-              // Use our output as the argument to `res.serverError()`.
-              var catchallErr = output;
-              // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
-              if (_.isUndefined(output)) {
-                catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
-              }
-              return res.serverError(catchallErr);
 
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // Currently here strictly for backwards compatibility-
-            // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-            case 'status':
-              console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-              return res.send(responses[exitCodeName].statusCode);
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+            // -•
+            switch (responses[exitCodeName].responseType) {
 
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-            // Currently here strictly for backwards compatibility-
-            // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-            case 'json':
-              console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-              return res.json(responses[exitCodeName].statusCode, output);
-            ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              case 'error':
+                if (!res.serverError) {
+                  return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+                }
+                // Use our output as the argument to `res.serverError()`.
+                var catchallErr = output;
+                // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
+                if (_.isUndefined(output)) {
+                  catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
+                }
+                return res.serverError(catchallErr);
 
-
-            case '':
-              // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
-              //   but we're careful to not USE that data if we understood the exit to be null)
-
-              var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
-              if (_.isUndefined(outputExample)) {
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'status':
+                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
                 return res.send(responses[exitCodeName].statusCode);
-              }
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-              // • Expecting ref:
-              if (outputExample === '===') {
-                // • Readable stream
-                if (output instanceof Readable) {
-                  res.status(responses[exitCodeName].statusCode);
-                  return output.pipe(res);
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'json':
+                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+                return res.json(responses[exitCodeName].statusCode, output);
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+              case '':
+                // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
+                //   but we're careful to not USE that data if we understood the exit to be null)
+
+                var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
+                if (_.isUndefined(outputExample)) {
+                  return res.send(responses[exitCodeName].statusCode);
                 }
-                // • Buffer
-                else if (output instanceof Buffer) {
-                  res.status(responses[exitCodeName].statusCode);
-                  return Streamifier.createReadStream(output).pipe(res);
+
+                // • Expecting ref:
+                if (outputExample === '===') {
+                  // • Readable stream
+                  if (output instanceof Readable) {
+                    res.status(responses[exitCodeName].statusCode);
+                    return output.pipe(res);
+                  }
+                  // • Buffer
+                  else if (output instanceof Buffer) {
+                    res.status(responses[exitCodeName].statusCode);
+                    return Streamifier.createReadStream(output).pipe(res);
+                  }
+                  // • else just continue on to our JSON catch-all below
                 }
-                // • else just continue on to our JSON catch-all below
-              }
 
-              // • Anything else:  (i.e. JSON / rttc.dehydrate())
-              return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
+                // • Anything else:  (i.e. JSON / rttc.dehydrate())
+                return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
 
 
-            case 'redirect':
-              // If `res.redirect()` is missing, we have to complain.
-              // (but if this is a Sails app and this is a Socket request, let the framework handle it)
-              if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
-                throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
-              }
-              if (_.isUndefined(output)) {
-                return res.redirect(responses[exitCodeName].statusCode);
-              }
-              else {
-                return res.redirect(responses[exitCodeName].statusCode, output);
-              }
-              break;
+              case 'redirect':
+                // If `res.redirect()` is missing, we have to complain.
+                // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+                if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
+                  throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
+                }
+                if (_.isUndefined(output)) {
+                  return res.redirect(responses[exitCodeName].statusCode);
+                }
+                else {
+                  return res.redirect(responses[exitCodeName].statusCode, output);
+                }
+                break;
 
 
-            case 'view':
-              // If `res.view()` is missing, we have to complain.
-              // (but if this is a Sails app and this is a Socket request, let the framework handle it)
-              if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
-                throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
-              }
-              res.statusCode = responses[exitCodeName].statusCode;
-              if (_.isUndefined(output)) {
-                return res.view(responses[exitCodeName].viewTemplatePath);
-              }
-              else {
-                return res.view(responses[exitCodeName].viewTemplatePath, output);
-              }
-              break;
+              case 'view':
+                // If `res.view()` is missing, we have to complain.
+                // (but if this is a Sails app and this is a Socket request, let the framework handle it)
+                if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
+                  throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
+                }
+                res.statusCode = responses[exitCodeName].statusCode;
+                if (_.isUndefined(output)) {
+                  return res.view(responses[exitCodeName].viewTemplatePath);
+                }
+                else {
+                  return res.view(responses[exitCodeName].viewTemplatePath, output);
+                }
+                break;
 
 
-            default:
-              if (!res.serverError) {
-                return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
-              }
-              return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
-          }//</switch>
+              default:
+                if (!res.serverError) {
+                  return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
+                }
+                return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
+            }//</switch>
+          } catch (e) { return res.send(500, e); }
         });//</after: waitForSimulatedLatencyIfRelevant>
 
       };//</respondApropos>
