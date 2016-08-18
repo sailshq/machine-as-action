@@ -160,7 +160,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         return exits.success();
       }
       // Otherwise, still exit success, but use the output example (i.e. an exemplar)
-      // as fake data.  This will be used as the locals/JSON response/redirect URL.
+      // as fake data.  This will be used as the locals, response data, or redirect URL
+      // (depending on the exit's responseType, of course.)
       else {
 
         // But if you're in production, since this would respond with
