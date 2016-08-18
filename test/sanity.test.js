@@ -630,6 +630,7 @@ testRoute('`redirect` with custom status code', {
 
 
 
+
 var _loggerRan;
 var _loggerRanWithArgs;
 testRoute('should call `logUnexpectedOutputFn` with expected argument', {
@@ -704,6 +705,33 @@ testRoute('should NOT call `logUnexpectedOutputFn` if no unexpected output is se
   return done();
 });
 
+
+
+
+
+
+testRoute('should work when lobbed another random sanity check', {
+
+  machine: {
+    inputs: {},
+    exits: {
+      notFound: {
+        description: 'Something fake happened.  Because this is fake.'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.notFound(new Error('Could not locate polar bears.  Don\'t panic, but get help as soon as possible.'));
+    }
+  },
+}, function (err, resp, body, done){
+
+  try {
+    assert(err);
+    assert.equal(err.status, 500);
+  } catch (e) { return done(e); }
+
+  return done();
+});
 
 
 

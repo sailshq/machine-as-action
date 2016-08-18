@@ -18,7 +18,7 @@ module.exports = function setupLifecycle (){
         grunt: false
       },
       log: {
-        level: 'silent'
+        level: 'warn'
       },
       globals: false
     }, function (err){
