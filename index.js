@@ -51,7 +51,7 @@ var getOutputExample = require('./helpers/get-output-example');
  *
  *
  *           @optional {Array} files
- *                     An array of input ids identifying inputs which expect to
+ *                     An array of input code names identifying inputs which expect to
  *                     receive file uploads instead of text parameters. These file inputs
  *                     must have `example: '==='`, but they needn't necessarily be
  *                     `required`.
@@ -93,6 +93,11 @@ var getOutputExample = require('./helpers/get-output-example');
  *                     if set, then simulate a latency of the specified number of milliseconds (e.g. 500)
  *                     @default 0
  *
+ *           @optional {Boolean} logUnexpectedOutputFn
+ *                     An optional override function to call when any output other than `undefined` is
+ *                     received from a void exit (i.e. an exit w/ no outputExample).
+ *                     @default (use `sails.log.warn()` if available, or `console.warn()` otherwise.)
+ *
  *
  * -OR-
  *
@@ -130,7 +135,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
   // Set up default options:
   options = _.defaults(options, {
-    simulateLatency: 0
+    simulateLatency: 0,
+    // Note that the default implementation of `logUnexpectedOutputFn` is inline below
+    // (this is so that it has closure scope access to `req._sails`)
   });
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
@@ -673,11 +680,49 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
               case '':
-                // • Undefined output example:  (i.e. here we take that to mean void. Technically it could still send through data,
-                //   but we're careful to not USE that data if we understood the exit to be null)
-
+                // • Undefined output example:  We take that to mean void...mostly (see below.)
                 var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
                 if (_.isUndefined(outputExample)) {
+
+                  // Expose a more specific varname for clarity.
+                  var unexpectedOutput = output;
+
+                  // Technically the machine `fn` could still send through data.
+                  // No matter what, we NEVER send that runtime data to the response.
+                  //
+                  // BUT we still log that data to the console using `sails.log.warn()` if available
+                  // (otherwise `console.warn()`).  We use an overridable log function to do this.
+                  if (!_.isUndefined(unexpectedOutput)) {
+
+
+                    try {
+                      // If not provided, use custom implementation.
+                      if (!_.isUndefined(options.logUnexpectedOutputFn)) {
+                        options.logUnexpectedOutputFn(unexpectedOutput);
+                      }
+                      // Otherwise, use the default implementation:
+                      else {
+                        var logMsg = 'Received incoming request (`'+req.method+' '+req.path+'`) '+
+                                     'and ran action (`'+machineDef.identity+'`), which exited with '+
+                                     'its `'+exitCodeName+'` response and the following data:\n'+
+                                     util.inspect(unexpectedOutput, {depth: null})+
+                                     '\n'+
+                                     '(^^ this data was not sent in the response)';
+
+                        if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.warn)) {
+                          req._sails.log.warn(logMsg);
+                        }
+                        else {
+                          console.warn(logMsg);
+                        }
+                      }//</default implementation to handle logging unexpected output>
+                    } catch (e) { console.warn('The configured log function for unexpected output (`logUnexpectedOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
+                  }//</if there is unexpected output sent through callback within `fn` at runtime>
+
+                  // >-
+                  // Regardless of whether there's unexpected output or not...
+                  //
+                  // Send the response.
                   return res.send(responses[exitCodeName].statusCode);
                 }
 
