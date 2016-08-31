@@ -492,8 +492,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // We use a local variable (`alreadyExited`) as a spinlock.
-    var alreadyExited;
+    // We use a local variable (`exitAttempts`) as a spinlock.
+    // (it tracks the code names of _which_ exit(s) were already triggered)
+    var exitAttempts = [];
 
     var callbacks = {};
     _.each(_.keys(wetMachine.exits), function builtExitCallback(exitCodeName){
@@ -503,8 +504,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
         // This spinlock protects against the machine calling more than one
         // exit, or the same exit twice.
-        if (alreadyExited) { return; }
-        alreadyExited = true;
+        if (exitAttempts.length > 0) {
+          console.warn('Consistency violation: When fulfilling this request (`'+req.method+' '+req.path+'`) '+
+          'the action attempted to respond (i.e. call its exits) more than once!  An action should _always_ '+
+          'send exactly one response.  This particular unexpected extra response was attempted via the `'+exitCodeName+'` '+
+          'exit.  It was ignored.  For debugging purposes, here is a list of all exit/response attempts made '+
+          'by this action:',exitAttempts);
+          return;
+        }
+        exitAttempts.push(exitCodeName);
 
         (function _waitForSimulatedLatencyIfRelevant(_cb){
           if (!options.simulateLatency) { return _cb(); }
