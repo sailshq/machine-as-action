@@ -37,6 +37,7 @@ testRoute('should not JSON-encode top-level strings in output', {
 }, function (err, resp, body, done){
   if (err) { return done(err); }
   assert.equal(body, 'hello world');
+  // ^^ i.e. 'hello world', not '"hello world"'
   return done();
 });
 
