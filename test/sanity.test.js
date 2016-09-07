@@ -22,6 +22,27 @@ testRoute('sanity check (ridiculously simplistic usage should work)', {
 
 
 
+testRoute('should not JSON-encode top-level strings in output', {
+  machine: {
+    inputs: {},
+    exits: {
+      success: {
+        outputExample: '*'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('hello world');
+    }
+  },
+}, function (err, resp, body, done){
+  if (err) { return done(err); }
+  assert.equal(body, 'hello world');
+  return done();
+});
+
+
+
+
 testRoute('should be able to access `env.req` and `env.res`', {
   method: 'POST',
   path: '/something',

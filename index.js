@@ -771,11 +771,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     res.status(responses[exitCodeName].statusCode);
                     return Streamifier.createReadStream(output).pipe(res);
                   }
-                  // • else just continue on to our JSON catch-all below
+                  // • else just continue on to our `res.send()` catch-all below
                 }
 
-                // • Anything else:  (i.e. JSON / rttc.dehydrate())
-                return res.json(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
+                // • Anything else:  (i.e. rttc.dehydrate())
+                return res.send(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
 
 
               case 'redirect':
