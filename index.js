@@ -120,6 +120,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the node machine definition
   var machineDef;
   var options;
+
+
   // If a `machine` property was specified, then that is our node machine definition,
   // and whatever's left after omitting the `machine` property is our options.
   if (_.isObject(optsOrMachineDef.machine)) {
@@ -139,6 +141,26 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // Note that the default implementation of `logUnexpectedOutputFn` is inline below
     // (this is so that it has closure scope access to `req._sails`)
   });
+
+
+  // // If a function was provided, freak out.
+  // // (Unless this is a wet machine-- in which case it's ok)
+  // if (_.isFunction(optsOrMachineDef)) {
+
+  //   // If this is clearly an already "-as-action"-ified thing, then freak out in a more helpful way.
+  //   if (optsOrMachineDef.IS_MACHINE_AS_ACTION) {
+  //     throw new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
+  //   }
+  //   // Otherwise, if this is a wet machine, that's OK-- we know how to handle it.
+  //   else if (optsOrMachineDef.isWetMachine) {
+  //     // No worries.  It's ok.  Keep going.
+  //   }
+  //   // Otherwise just freak out.
+  //   else {
+  //     throw new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
+  //   }
+  // }
+  // // --•
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
   machineDef = _.extend({
@@ -219,7 +241,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
    * @param  {Request} req
    * @param  {Response} res
    */
-  return function _requestHandler(req, res) {
+  var action = function _requestHandler(req, res) {
 
     // Set up a local variable that will be used to hold the "live machine"
     // (which is a lot like a configured part or machine instruction)
@@ -798,7 +820,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // Then attach them and `.exec()` the machine.
     return liveMachine.exec(callbacks);
 
-  };
+  };//</define action>
+
+  // Set `IS_MACHINE_AS_ACTION` flag to prevent accidentally attempting to wrap the same thing twice.
+  action = IS_MACHINE_AS_ACTION = true;
+
+  // Finally, return the action.
+  return action;
 };
 
 
