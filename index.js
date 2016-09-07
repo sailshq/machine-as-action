@@ -823,7 +823,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   };//</define action>
 
   // Set `IS_MACHINE_AS_ACTION` flag to prevent accidentally attempting to wrap the same thing twice.
-  action = IS_MACHINE_AS_ACTION = true;
+  action.IS_MACHINE_AS_ACTION = true;
 
   // Finally, return the action.
   return action;
