@@ -20,11 +20,15 @@ module.exports = function testRoute(label, opts, testFn){
     this.timeout(5000);
 
     it('should respond as expected', function (done) {
-      return buildActionAndSendRequest(app, opts, function (err, resp, body) {
-        return testFn(err, resp, body, done);
-      });
-    });
-  });
+      try {
+        return buildActionAndSendRequest(app, opts, function (err, resp, body) {
+          return testFn(err, resp, body, done);
+        });
+      } catch (e) {
+        return testFn(e, undefined, undefined, done);
+      }
+    });//</it>
+  });//</describe>
 };
 
 

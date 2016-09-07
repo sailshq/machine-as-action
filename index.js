@@ -143,24 +143,28 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   });
 
 
-  // // If a function was provided, freak out.
-  // // (Unless this is a wet machine-- in which case it's ok)
-  // if (_.isFunction(optsOrMachineDef)) {
+  // If a function was provided, freak out.
+  // (Unless this is a wet machine-- in which case it's ok)
+  if (_.isFunction(machineDef)) {
 
-  //   // If this is clearly an already "-as-action"-ified thing, then freak out in a more helpful way.
-  //   if (optsOrMachineDef.IS_MACHINE_AS_ACTION) {
-  //     throw new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
-  //   }
-  //   // Otherwise, if this is a wet machine, that's OK-- we know how to handle it.
-  //   else if (optsOrMachineDef.isWetMachine) {
-  //     // No worries.  It's ok.  Keep going.
-  //   }
-  //   // Otherwise just freak out.
-  //   else {
-  //     throw new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
-  //   }
-  // }
-  // // --•
+    // If this is clearly an already "-as-action"-ified thing, then freak out in a more helpful way.
+    if (machineDef.IS_MACHINE_AS_ACTION) {
+      var doubleWrapErr = new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
+      doubleWrapErr.code = 'E_DOUBLE_WRAP';
+      throw doubleWrapErr;
+    }
+    // Otherwise, if this is a wet machine, that's OK-- we know how to handle it.
+    else if (machineDef.isWetMachine) {
+      // No worries.  It's ok.  Keep going.
+    }
+    // Otherwise just freak out.
+    else {
+      var invalidMachineDefErr = new Error('Cannot build action: Provided machine definition must be a dictionary, with an `fn`.  See http://node-machine.org/spec/machine for details.');
+      invalidMachineDefErr.code = 'E_INVALID_MACHINE_DEF';
+      throw invalidMachineDefErr;
+    }
+  }
+  // --•
 
   // Extend a default def with the actual provided def to allow for a laxer specification.
   machineDef = _.extend({
