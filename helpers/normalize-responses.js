@@ -130,8 +130,9 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       }
     }
     else if (exitDef.responseType === 'view') {
-      if (!_.isUndefined(outputExample) && !_.isPlainObject(outputExample)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be a dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)));
+      if (!_.isUndefined(outputExample) && outputExample !== '===' && !_.isPlainObject(outputExample)) {
+        // (Note that we tolerate `===` so that it can be used for performance reasons.)
+        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be some sort of dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)));
       }
     }
     else if (exitDef.responseType === 'json') {
