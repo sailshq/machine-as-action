@@ -112,6 +112,11 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       else if (exitCodeName === 'success') {
         exitDef.statusCode = 200;
       }
+      // Otherwise, if this a view, always use the 200 status code by default.
+      // `200` (view)
+      else if (exitDef.responseType === 'view') {
+        exitDef.statusCode = 200;
+      }
       // Otherwise... well, this must be some other exit besides success and error
       // and it must not be doing a redirect, so use:
       // `500` (misc)

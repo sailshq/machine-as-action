@@ -799,7 +799,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
                   throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
                 }
+
                 res.statusCode = responses[exitCodeName].statusCode;
+
                 if (_.isUndefined(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
                 }
