@@ -16,11 +16,23 @@ var OpenWeather = require('machinepack-openweather');
 // WeatherController.js
 module.exports = {
 
+  traditionalReqRes: function (req, res) { /* ... */ },
+
   getLatest: asAction(OpenWeather.getCurrentConditions),
 
-  somethingCustom: function (req, res) { /* ... */ },
+  doSomethingCustom: asAction({
+    exits: {
+      success: {
+        outputExample: 'Some dynamic message like this.'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('Hello world!');
+    }
+  }),
 
   // etc...
+
 }
 ```
 
@@ -43,6 +55,7 @@ $.get('/weather/getLatest', {
 
 So sending down data is great, but sometimes you need to render view templates, redirect to dynamic URLs, use a special status code, stream down a file, etc.  No problem.  You can customize the response from each exit using the `responses` option:
 
+
 ```js
 var asAction = require('machine-as-action');
 
@@ -50,23 +63,24 @@ var asAction = require('machine-as-action');
 module.exports = {
 
   showHomepage: asAction({
-    machine: {
-      exits: {
-        success:{
-          example: {
-            stuff: 'some string'
-          }
-        }
-      },
-      fn: function(inputs,exits){return exits.success({stuff: 'things'});}
-    },
-    responses: {
-      success: {
+    
+
+    exits: {
+
+      success:{
         responseType: 'view',
-        view: 'homepage'
-        // The view will be provided with a "local" called `stuff`
+        viewTemplatePath: 'homepage'
+        // The view will be provided with a "local" called `stuff`,
       }
+
+    },
+
+
+    fn: function(inputs,exits){
+      return exits.success({ stuff: 'things' });
     }
+    
+
   })
 };
 ```
@@ -78,13 +92,21 @@ For each of your exits, you can optionally specify a `responseType`, `status`, a
  + ""         (the standard response:  Determine an appropriate response based on context: this might send plain text, download a file, transmit data as JSON, or send no response body at all.)
  + "view"     (render and respond with a view; exit output will be provided as view locals)
  + "redirect" (redirect to the URL returned as the exit output)
- + "error"    (use `res.serverError()` to send the appropriate default error response, such as an error page or a JSON message with a 500 status code.  Uses your project's configured responses from `api/responses/`, if applicable.)
+ 
+ <!-- + "error"    (use `res.serverError()` to send the appropriate default error response, such as an error page or a JSON message with a 500 status code.  Uses your project's configured responses from `api/responses/`, if applicable.) -->
 
 **statusCode** is the status code to respond with.  (This works just like [status codes in Sails/Node](http://sailsjs.org/documentation/reference/response-res/res-status)).
 
 **viewTemplatePath** is the relative path (from the `views/` directory) of the view to render.  It is only relevant if `responseType` is set to "view". (This works just like [views in Sails/Express](http://sailsjs.org/documentation/concepts/views)).
  
-If any of the above are not set explicitly, they will fall back to reasonable defaults.
+> If any of the above are not set explicitly, they will fall back to reasonable defaults (based on available information).
+> 
+> For example, if a non-success exit is set up to serve a view, then it will use the 200 response code.
+> But if a non-success exit has no explicit response type configured (meaning it will respond with plain text,
+> JSON-encoded data, or with no data and just a status code), then machine-as-action will default to using
+> the 500 status code.  Similarly, in the same same scenario, but with `responseType: 'redirect'`, the status
+> code will default to 302.  The success exit always has a default status code of 200, unless it is also
+> `responseType: 'redirect'` (in which case it defaults to 302.)
 
 
 
@@ -100,24 +122,33 @@ var asAction = require('machine-as-action');
 // WeatherController.js
 module.exports = {
 
+
   uploadPhoto: asAction({
+    
+
     files: ['photo']
-    machine: {
-      inputs: {
-        photo: {
-          example: '===',
-          required: true
-        }
-      },
-      exits: {success: {}},
-      fn: function (inputs, exits){
-        inputs.photo.upload(function (err, uploadedFiles){
-          if (err) return exits.error(err);
-          exits.success();
-        });
+    
+
+    inputs: {
+
+      photo: {
+        example: '===',
+        required: true
       }
+
     },
+
+
+    fn: function (inputs, exits){
+      inputs.photo.upload(function (err, uploadedFiles){
+        if (err) return exits.error(err);
+        exits.success();
+      });
+    }
+
+
   })
+
 
 };
 ```
@@ -142,6 +173,94 @@ Aside from the [normal properties that go into a Node Machine definition](http:/
 > + For **more details** on any of these options, see https://github.com/treelinehq/machine-as-action/blob/02ae23ef1d052dfe7fa6139ac14516c83c12fe1b/index.js#L30.
 > + Any of the options above should be provided as **top-level properties** of the `options` dictionary.
 > + `machine-as-action` also supports **response directives** that can be provided as additional properties within nested exit definitions.  They are `responseType`, `statusCode`, and `viewTemplatePath`.  See examples above for more information.
+
+
+## Extended example
+
+This is a more detailed example, based on the simple intro example at the top of this README.
+
+```js
+var asAction = require('machine-as-action');
+var OpenWeather = require('machinepack-openweather');
+
+// WeatherController.js
+module.exports = {
+
+  traditionalReqRes: function (req, res) { /* ... */ },
+
+  getLatest: asAction(OpenWeather.getCurrentConditions),
+
+  doSomethingCustom: asAction({
+    description: 'Send a plaintext response.',
+    exits: {
+      success: {
+        outputExample: 'Some dynamic message like this.'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('Hello world!');
+    }
+  }),
+
+  getForecastData: asAction({
+    description: 'Fetch data for the forecast with the specified id.',
+    inputs: {
+      id: { required: true, example: 325 }
+    },
+    exits: {
+      success: {
+        outputExample: {
+          weatherPerson: 'Joaquin',
+          days: [
+            { tempCelsius: 21, windSpeedMph: 392 }
+          ]
+        }
+      },
+      notFound: {
+        description: 'Could not find forecast with that id.',
+        statusCode: 404
+      }
+    },
+    fn: function (inputs, exits) {
+      Forecast.find({ id: inputs.id }).exec(function (err, forecastRecord) {
+        if (err) { return exits.error(err); }
+        if (!forecastRecord) { return exits.notFound(); }
+        return exits.success(forecastRecord);
+      });
+    }
+  }),
+
+  show7DayForecast: asAction({
+    description: 'Show the current 7 day forecast page.',
+    exits: {
+      success: {
+        responseType: 'view',
+        viewTemplatePath: 'pages/weather/7-day-forecast'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success('http://sailsjs.org');
+    }
+  }),
+
+  redirectToExternalForecastMaybe: asAction({
+    description: 'Redirect the requesting user agent to http://weather.com, or to http://omfgdogs.com.',
+    exits: {
+      success: { responseType: 'redirect' }
+    },
+    fn: function (inputs, exits) {
+      if (Math.random() > 0.5) {
+        return exits.success('http://weather.com');
+      }
+      else {
+        return exits.success('http://omfgdogs.com');
+      }
+    }
+  })
+
+};
+
+```
 
 
 ## License
