@@ -53,7 +53,7 @@ $.get('/weather/getLatest', {
 
 #### Customizing the response
 
-So sending down data is great, but sometimes you need to render view templates, redirect to dynamic URLs, use a special status code, stream down a file, etc.  No problem.  You can customize the response from each exit using the `responses` option:
+So sending down data is great, but sometimes you need to render view templates, redirect to dynamic URLs, use a special status code, stream down a file, etc.  No problem.  You can customize the response from each exit using a number of additional,  machine-as-action specific options.
 
 
 ```js

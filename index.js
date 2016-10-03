@@ -123,7 +123,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // definition.  All other miscellaneous options are whitelisted.
   var machineDef;
   var options;
-  var MISC_OPTIONS = ['files', 'urlWildcardSuffix', 'disableDevelopmentHeaders', 'disableXExitHeader', 'simulateLatency', 'logUnexpectedOutputFn'];
+  var MISC_OPTIONS = [
+    'files',
+    'urlWildcardSuffix',
+    'disableDevelopmentHeaders',
+    'disableXExitHeader',
+    'simulateLatency',
+    'logUnexpectedOutputFn',
+    'responses'//<< deprecated, will be removed soon!
+  ];
   if (!optsOrMachineDef.machine) {
     machineDef = optsOrMachineDef;
     options = _.pick(optsOrMachineDef, MISC_OPTIONS);
