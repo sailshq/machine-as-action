@@ -45,8 +45,11 @@ testRoute('should not JSON-encode top-level strings in output', {
 
 
 testRoute('should be able to access `env.req` and `env.res`', {
-  method: 'POST',
-  path: '/something',
+  _testOpts: {
+    routeAddress: 'POST /something',
+    method: 'POST',
+    path: '/something'
+  },
   machine: {
     inputs: {},
     exits: {},
@@ -107,9 +110,14 @@ testRoute('if input def + compatible input examples are specified, parameters sh
       return exits.success(inputs.x);
     }
   },
-  params: {
-    x: 'hello world!'
-  }
+  _testOpts: {
+    routeAddress: 'GET /something',
+    method: 'GET',
+    path: '/something',
+    params: {
+      x: 'hello world!'
+    }
+  },
 }, function (err, resp, body, done){
   if (err) { return done(err); }
   if (body !== 'hello world!') {
@@ -138,10 +146,15 @@ testRoute('ignore extra parameters', {
       return exits.success(inputs.y);
     }
   },
-  params: {
-    x: 'some value for x',
-    y: 'some value for y'
-  }
+  _testOpts: {
+    routeAddress: 'GET /something',
+    method: 'GET',
+    path: '/something',
+    params: {
+      x: 'some value for x',
+      y: 'some value for y'
+    }
+  },
 }, function (err, resp, body, done){
   if (err) { return done(err); }
   if (body !== undefined) {
@@ -173,8 +186,6 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
       if (inputs.x !== undefined) { return exits.error(); }
       return exits.success();
     }
-  },
-  params: {
   }
 }, function (err, resp, body, done){
   if (err) { return done(err); }
@@ -217,8 +228,6 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //       return exits.success();
 //     }
 //   },
-//   params: {
-//   }
 // }, function (err, resp, body, done){
 //   if (err) {
 //     if (err.status !== 400) {
@@ -246,11 +255,16 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //       return exits.success();
 //     }
 //   },
-//   params: {
-//     x: {
-//       foo: [[4]]
+//   _testOpts: {
+//     routeAddress: 'GET /something',
+//     method: 'GET',
+//     path: '/something',
+//     params: {
+//       x: {
+//         foo: [[4]]
+//       }
 //     }
-//   }
+//   },
 // }, function (err, resp, body, done){
 //   if (err) {
 //     if (err.status !== 400) {
@@ -279,9 +293,14 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //       return exits.success();
 //     }
 //   },
-//   params: {
-//     x: [4, 3]
-//   }
+//   _testOpts: {
+//     routeAddress: 'GET /something',
+//     method: 'GET',
+//     path: '/something',
+//     params: {
+//       x: [4, 3]
+//     }
+//   },
 // }, function (err, resp, body, done){
 //   if (err) {
 //     if (err.status !== 400) {
