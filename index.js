@@ -117,23 +117,26 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
   optsOrMachineDef = optsOrMachineDef||{};
 
-  // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the node machine definition
+  // Use either `optsOrMachineDef` or `optsOrMachineDef.machine` as the node machine definition.
+  // If `optsOrMachineDef.machine` is truthy, we'll use that as the machine definition.
+  // Otherwise, we'll understand the entire `optsOrMachineDef` dictionary to be the machine
+  // definition.  All other miscellaneous options are whitelisted.
   var machineDef;
   var options;
-
-
-  // If a `machine` property was specified, then that is our node machine definition,
-  // and whatever's left after omitting the `machine` property is our options.
-  if (_.isObject(optsOrMachineDef.machine)) {
-    machineDef = optsOrMachineDef.machine;
-    options = _.omit(optsOrMachineDef, 'machine');
-  }
-  // Otherwise, the entire `optsOrMachineDef` dictionary is our node machine def,
-  // and there are no other options.
-  else {
+  var MISC_OPTIONS = ['files', 'urlWildcardSuffix', 'disableDevelopmentHeaders', 'disableXExitHeader', 'simulateLatency', 'logUnexpectedOutputFn'];
+  if (!optsOrMachineDef.machine) {
     machineDef = optsOrMachineDef;
-    options = {};
+    options = _.pick(optsOrMachineDef, MISC_OPTIONS);
   }
+  else {
+    machineDef = optsOrMachineDef.machine;
+    options = _.pick(optsOrMachineDef, MISC_OPTIONS);
+  }
+
+  if (!_.isObject(machineDef)) {
+    throw new Error('Consistency violation: Machine definition must be provided as a dictionary.');
+  }
+
 
   // Set up default options:
   options = _.defaults(options, {
@@ -329,8 +332,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       // Note that we compare against the code name in the input definition.  The `urlWildcardSuffix` provided to
       // machine-as-action should reference the c-input by code name, not by any other sort of ID (i.e. if you are
       // using a higher-level immutable ID abstraction, rewrite the urlWildcardSuffix to the code name beforehand)
-      if (options.urlWildcardSuffix &&
-        options.urlWildcardSuffix === inputCodeName ) {
+      if (options.urlWildcardSuffix && options.urlWildcardSuffix === inputCodeName ) {
         memo[inputCodeName] = req.param('0');
       }
       // Otherwise, this is just your standard, run of the mill parameter.
