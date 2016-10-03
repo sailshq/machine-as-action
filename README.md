@@ -162,7 +162,7 @@ Aside from the [normal properties that go into a Node Machine definition](http:/
 |:---------------------------|-----------------|:-------------------------------------------------------|
 | `machine`                  | ((dictionary?)) | If specified, `machine-as-action` will use this as the machine definition.  Otherwise by default, it expects the machine definition to be passed in at the top-level. In that case, the non-standard (`machine-as-action`-specific) options are omitted when the machine is built).
 | `files`                    | ((array?))      | An array of input code names identifying inputs which expect to receive file uploads instead of text parameters. These file inputs must have `example: '==='`, but they needn't necessarily be `required`.
-| `urlWildcardSuffix`        | ((string?))     | If this action is handling a route with a wildcard suffix (e.g. `/foo/bar/*`), then specify this option as the code name of the machine input which should receive the runtime value of `*`.
+| `urlWildcardSuffix`        | ((string?))     | If this action is handling a route with a wildcard suffix (e.g. `/foo/bar/*`), then specify this option as the code name of the machine input which should receive the string at runtime (i.e. the actual value of the "*" in the request URL).
 | `disableDevelopmentHeaders`| ((boolean?))    | If set, then do not automatically set headers w/ exit info during development.
 | `disableXExitHeader`       | ((boolean?))    | If set, then do not automatically send the `X-Exit` response header for any exit, regardless of whether this is a prod or dev environment.
 | `simulateLatency`          | ((number?))     | If set, then simulate a latency of the specified number of milliseconds (e.g. 500)
