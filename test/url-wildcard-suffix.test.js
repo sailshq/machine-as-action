@@ -10,7 +10,7 @@ testRoute('with urlWildcardSuffix option', {
 
   //------(these are just for the test utilities)------------//
   _testOpts: {
-    routeAddress: '/*',
+    routeAddress: 'GET /*',
     method: 'GET',
     path: '/foo/bar',
   },
@@ -48,6 +48,12 @@ testRoute('with urlWildcardSuffix option', {
 
 }, function (err, resp, body, done){
   if (err) { return done(err); }
+
+  try {
+
+    assert.equal(body, 'foo/bar');
+
+  } catch (e) { return done(e); }
 
   return done();
 
