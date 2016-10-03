@@ -2,8 +2,8 @@
  * Module dependencies
  */
 
-var setupLifecycle = require('./setup-lifecycle.helper');
-var buildActionAndSendRequest = require('./build-action-and-send-request.helper');
+var setupLifecycle = require('./setup-lifecycle.util');
+var buildActionAndSendRequest = require('./build-action-and-send-request.util');
 
 
 

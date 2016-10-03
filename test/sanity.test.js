@@ -1,7 +1,7 @@
 var util = require('util');
 var assert = require('assert');
 var _ = require('lodash');
-var testRoute = require('./utils/test-route.util');
+var testRoute = require('./util/test-route.util');
 
 
 

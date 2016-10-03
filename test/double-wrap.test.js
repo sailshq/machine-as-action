@@ -1,6 +1,6 @@
 var assert = require('assert');
 var asAction = require('../');
-var testRoute = require('./utils/test-route.util');
+var testRoute = require('./util/test-route.util');
 
 
 
