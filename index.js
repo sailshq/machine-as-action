@@ -30,6 +30,9 @@ var getOutputExample = require('./helpers/get-output-example');
  * @param  {Dictionary} optsOrMachineDef
  *           @required {Dictionary} machine
  *                       A machine definition.
+ *                       Note that the top-level properties of the machine definition may alternatively
+ *                       just be included inline amongst the other machine-as-action specific options.
+ *                       * * This inline inclusion is the **RECOMMENDED APPROACH** (see README.md). * *
  *
  *           @optional {Dictionary} responses
  *                       A set of static/lift-time response customizations.
@@ -48,6 +51,7 @@ var getOutputExample = require('./helpers/get-output-example');
  *
  *                       Note that these additional exit-specific response customizations may alternatively
  *                       be included inline in the exits of the machine definition (purely for convenience).
+ *                       * * This inline inclusion is the **RECOMMENDED APPROACH** (see README.md). * *
  *
  *
  *           @optional {Array} files
