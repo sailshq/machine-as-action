@@ -820,10 +820,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
                 }
 
+
                 res.statusCode = responses[exitCodeName].statusCode;
 
                 if (_.isUndefined(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
+                }
+                else if (!_.isObject(output) || _.isArray(output) || _.isFunction(output)){
+                  throw new Error('Cannot render a view for this request because the provided view locals data (the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  In order to respond with a view, either send through a dictionary (`exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through anything at all.');
                 }
                 else {
                   return res.view(responses[exitCodeName].viewTemplatePath, output);
