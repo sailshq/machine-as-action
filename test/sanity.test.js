@@ -674,8 +674,8 @@ testRoute('`redirect` with custom status code', {
 
 var _loggerRan;
 var _loggerRanWithArgs;
-testRoute('should call `logUnexpectedOutputFn` with expected argument', {
-  logUnexpectedOutputFn: function (unexpectedOutput) {
+testRoute('should call `logDebugOutputFn` with expected argument', {
+  logDebugOutputFn: function (unexpectedOutput) {
     _loggerRan = true;
     _loggerRanWithArgs = Array.prototype.slice.call(arguments);
   },
@@ -718,8 +718,8 @@ testRoute('should call `logUnexpectedOutputFn` with expected argument', {
 
 
 var _loggerRanButItShouldntHave;
-testRoute('should NOT call `logUnexpectedOutputFn` if no unexpected output is sent', {
-  logUnexpectedOutputFn: function (unexpectedOutput) {
+testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
+  logDebugOutputFn: function (unexpectedOutput) {
     _loggerRanButItShouldntHave = true;
   },
   machine: {
@@ -734,14 +734,11 @@ testRoute('should NOT call `logUnexpectedOutputFn` if no unexpected output is se
     }
   },
 }, function (err, resp, body, done){
+  // Should get error even though nothing was passed through
+  // (the machine runner builds this automatically)
   try {
-    assert(err);
-    assert.equal(err.status, 500);
+    assert(_.isError(err));
   } catch (e) { return done(e); }
-
-  if (_loggerRanButItShouldntHave) {
-    return done(new Error('Consistency violation: Should NOT have run custom log function!'));
-  }
 
   return done();
 });

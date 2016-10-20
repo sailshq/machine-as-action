@@ -97,7 +97,7 @@ var getOutputExample = require('./helpers/get-output-example');
  *                     if set, then simulate a latency of the specified number of milliseconds (e.g. 500)
  *                     @default 0
  *
- *           @optional {Boolean} logUnexpectedOutputFn
+ *           @optional {Boolean} logDebugOutputFn
  *                     An optional override function to call when any output other than `undefined` is
  *                     received from a void exit (i.e. an exit w/ no outputExample).
  *                     @default (use `sails.log.warn()` if available, or `console.warn()` otherwise.)
@@ -133,7 +133,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     'disableDevelopmentHeaders',
     'disableXExitHeader',
     'simulateLatency',
-    'logUnexpectedOutputFn',
+    'logDebugOutputFn',
     'responses'//<< deprecated, will be removed soon!
   ];
   if (!optsOrMachineDef.machine) {
@@ -153,7 +153,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // Set up default options:
   options = _.defaults(options, {
     simulateLatency: 0,
-    // Note that the default implementation of `logUnexpectedOutputFn` is inline below
+    // Note that the default implementation of `logDebugOutputFn` is inline below
     // (this is so that it has closure scope access to `req._sails`)
   });
 
@@ -750,8 +750,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                     try {
                       // If provided, use custom implementation.
-                      if (!_.isUndefined(options.logUnexpectedOutputFn)) {
-                        options.logUnexpectedOutputFn(unexpectedOutput);
+                      if (!_.isUndefined(options.logDebugOutputFn)) {
+                        options.logDebugOutputFn(unexpectedOutput);
                       }
                       // Otherwise, use the default implementation:
                       else {
@@ -762,14 +762,20 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                                      '\n'+
                                      '(^^ this data was not sent in the response)';
 
-                        if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.warn)) {
-                          req._sails.log.warn(logMsg);
-                        }
-                        else {
-                          console.warn(logMsg);
-                        }
+                        // Only log unexpected output in development.
+                        if (process.env.NODE_ENV !== 'production') {
+
+                          if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
+                            req._sails.log.debug(logMsg);
+                          }
+                          else {
+                            console.warn(logMsg);
+                          }
+
+                        }//</if we're in development mode>
+
                       }//</default implementation to handle logging unexpected output>
-                    } catch (e) { console.warn('The configured log function for unexpected output (`logUnexpectedOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
+                    } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
                   }//</if there is unexpected output sent through callback within `fn` at runtime>
 
                   // >-

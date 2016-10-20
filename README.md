@@ -165,7 +165,7 @@ Aside from the [normal properties that go into a Node Machine definition](http:/
 | `disableDevelopmentHeaders`| ((boolean?))    | If set, then do not automatically set headers w/ exit info during development.
 | `disableXExitHeader`       | ((boolean?))    | If set, then do not automatically send the `X-Exit` response header for any exit, regardless of whether this is a prod or dev environment.
 | `simulateLatency`          | ((number?))     | If set, then simulate a latency of the specified number of milliseconds (e.g. 500)
-| `logUnexpectedOutputFn`    | ((function?))   | An optional override function to call when any output other than `undefined` is received from a void exit (i.e. an exit w/ no outputExample).  By default, machine-as-action uses `sails.log.warn()` if available, or `console.warn()` otherwise.
+| `logDebugOutputFn`    | ((function?))   | An optional override function to call when any output other than `undefined` is received from a void exit (i.e. an exit w/ no outputExample).  By default, machine-as-action uses `sails.log.warn()` if available, or `console.warn()` otherwise.
 
 > ##### NOTE
 >
