@@ -262,6 +262,23 @@ module.exports = {
 ```
 
 
+
+## Bugs &nbsp; [![NPM version](https://badge.fury.io/js/machine-as-action.svg)](http://npmjs.com/package/machine-as-action)
+
+To report a bug, [click here](http://sailsjs.com/bugs).
+
+
+## Contributing &nbsp; [![Build Status](https://travis-ci.org/treelinehq/machine-as-action.svg?branch=master)](https://travis-ci.org/treelinehq/machine-as-action)
+
+Please observe the guidelines and conventions laid out in the [Sails project contribution guide](http://sailsjs.com/contribute) when opening issues or submitting pull requests.
+
+[![NPM](https://nodei.co/npm/machine-as-action.png?downloads=true)](http://npmjs.com/package/machine-as-action)
+
+
 ## License
 
-MIT &copy; Mike McNeil
+MIT &copy; 2015-2016 Mike McNeil
+
+_Incorporated as a core part of the Sails framework in 2016._
+
+The [Sails framework](http://sailsjs.com) is free and open-source under the [MIT License](http://sailsjs.com/license).
