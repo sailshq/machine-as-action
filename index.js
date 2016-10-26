@@ -215,7 +215,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         // But if you're in production, since this would respond with
         // a stub (i.e. fake data) then log a warning about this happening.
         // (since you probably don't actually want this to happen)
-        if (process.env.NODE_ENV.match(/production/i)) {
+        if (process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i)) {
 
           // Set a header to as a debug flag indicating this is just a stub.
           env.res.set('X-Stub', machineDef.identity);
@@ -577,7 +577,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // Unless the NODE_ENV environment variable is set to `production`,
             // or this has been manually disabled, send down all other available
             // metadata about the exit for use during development.
-            if ( !process.env.NODE_ENV.match(/production/i) && !options.disableDevelopmentHeaders) {
+            if ( !(process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i)) && !options.disableDevelopmentHeaders) {
               var responseInfo = responses[exitCodeName];
               if (responseInfo.friendlyName) {
                 res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
@@ -650,7 +650,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 'parameter'+(output.errors.length>1?'s':'')+'.';
 
                 // If NOT running in production, then provide additional details and tips.
-                if (!process.env.NODE_ENV.match(/production/i)) {
+                if (!(process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i))) {
                   jsonReadyErr.message = preamble+'  '+
                   '**This message and the following additional information will not '+
                   'be shown in production**:  '+
