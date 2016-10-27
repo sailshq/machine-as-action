@@ -706,7 +706,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
               case 'error':
                 if (!res.serverError) {
-                  return res.send(500, '`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+                  return res.status(500).send('`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
                 }
                 // Use our output as the argument to `res.serverError()`.
                 var catchallErr = output;
@@ -721,7 +721,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               // this response type may be removed (or more likely have its functionality tweaked) in a future release:
               case 'status':
                 console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-                return res.send(responses[exitCodeName].statusCode);
+                return res.status(responses[exitCodeName].statusCode).send();
               ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
               ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -782,7 +782,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   // Regardless of whether there's unexpected output or not...
                   //
                   // Send the response.
-                  return res.send(responses[exitCodeName].statusCode);
+                  return res.status(responses[exitCodeName].statusCode).send();
                 }
 
                 // • Expecting ref:
@@ -801,7 +801,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 }
 
                 // • Anything else:  (i.e. rttc.dehydrate())
-                return res.send(responses[exitCodeName].statusCode, rttc.dehydrate(output, true));
+                return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
 
               case 'redirect':
@@ -843,11 +843,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
               default:
                 if (!res.serverError) {
-                  return res.send(500, 'Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
+                  return res.status(500).send('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
                 }
                 return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
             }//</switch>
-          } catch (e) { return res.send(500, e); }
+          } catch (e) { return res.status(500).send(e); }
         });//</after: waitForSimulatedLatencyIfRelevant>
 
       };//</respondApropos>
