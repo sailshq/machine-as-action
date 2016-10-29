@@ -149,6 +149,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     throw new Error('Consistency violation: Machine definition must be provided as a dictionary.');
   }
 
+  // https://github.com/treelinehq/machine-as-action/commit/d156299bc9cd85400bac3ab21b22dcbc3040bbda
+  // Determine whether we are currently running in production.
+  var IS_RUNNING_IN_PRODUCTION = (
+    process.env.NODE_ENV === 'production'
+  );
+
 
   // Set up default options:
   options = _.defaults(options, {
@@ -215,7 +221,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         // But if you're in production, since this would respond with
         // a stub (i.e. fake data) then log a warning about this happening.
         // (since you probably don't actually want this to happen)
-        if (process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i)) {
+        if (IS_RUNNING_IN_PRODUCTION) {
 
           // Set a header to as a debug flag indicating this is just a stub.
           env.res.set('X-Stub', machineDef.identity);
@@ -224,7 +230,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           'That means the output sent from this action will be completely fake!  To do this, `machine-as-action` '+
           'is using the `outputExample` from the success exit and using that as output.\n'+
           '(This warning is being logged because you are in a production environment according to NODE_ENV)');
-        }
+        }//</if production>
+        //>-
 
         return exits.success(successExitOutputExample);
       }
@@ -574,10 +581,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               res.set('X-Exit', exitCodeName);
             }
 
-            // Unless the NODE_ENV environment variable is set to `production`,
-            // or this has been manually disabled, send down all other available
-            // metadata about the exit for use during development.
-            if ( !(process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i)) && !options.disableDevelopmentHeaders) {
+            // If running in development and development headers have not been explicitly disabled,
+            // then send down other available metadata about the exit for convenience for developers
+            // integrating with this API endpoint.
+            var doSendDevHeaders = (
+              !IS_RUNNING_IN_PRODUCTION &&
+              !options.disableDevelopmentHeaders
+            );
+            if (doSendDevHeaders) {
               var responseInfo = responses[exitCodeName];
               if (responseInfo.friendlyName) {
                 res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
@@ -605,7 +616,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               else if (responseInfo.responseType === 'view') {
                 res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
               }
-            }
+            }//</if running in a non-production environment without development headers explicitly disabled>
             // >-
 
 
@@ -642,7 +653,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               err.toJSON = function (){
                 // Include the error code and the array of RTTC validation errors
                 // for easy programmatic parsing.
-                var jsonReadyErr = _.pick(err, ['code', 'errors']);
+                var jsonReadyErrDictionary = _.pick(err, ['code', 'errors']);
                 // And also include a more front-end-friendly version of the error message.
                 var preamble =
                 'The server could not fulfill this request (`'+req.method+' '+req.path+'`) '+
@@ -650,8 +661,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 'parameter'+(output.errors.length>1?'s':'')+'.';
 
                 // If NOT running in production, then provide additional details and tips.
-                if (!(process.env.NODE_ENV && process.env.NODE_ENV.match(/production/i))) {
-                  jsonReadyErr.message = preamble+'  '+
+                if (!IS_RUNNING_IN_PRODUCTION) {
+                  jsonReadyErrDictionary.message = preamble+'  '+
                   '**This message and the following additional information will not '+
                   'be shown in production**:  '+
                   'Tip: Check your client-side code to make sure that the request data it '+
@@ -662,10 +673,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 }
                 // If running in production, use a message that is more terse.
                 else {
-                  jsonReadyErr.message = preamble;
+                  jsonReadyErrDictionary.message = preamble;
                 }
-                return jsonReadyErr;
-              };
+                //>-
+
+                return jsonReadyErrDictionary;
+
+              };//</define :: err.toJSON()>
 
 
               // Just send a 400 response with the error encoded as JSON.
@@ -763,7 +777,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                                      '(^^ this data was not sent in the response)';
 
                         // Only log unexpected output in development.
-                        if (process.env.NODE_ENV !== 'production') {
+                        if (!IS_RUNNING_IN_PRODUCTION) {
 
                           if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
                             req._sails.log.debug(logMsg);
@@ -772,7 +786,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                             console.warn(logMsg);
                           }
 
-                        }//</if we're in development mode>
+                        }//</if we're in development mode, log unexpected output>
 
                       }//</default implementation to handle logging unexpected output>
                     } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
