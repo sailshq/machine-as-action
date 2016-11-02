@@ -154,6 +154,12 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       if (_.isUndefined(outputExample)) {
         outputExample = '/some/other/place';
         exitDef.outputExample = outputExample;
+        // Currently, we have to set BOTH `outputExample` and `example`.
+        // This will be normalized soon in a patch release of the machine runner, and at that
+        // point, this line can be removed:
+        // ------------------------------------------------
+        exitDef.example = outputExample;
+        // ------------------------------------------------
       }
 
     }
