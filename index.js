@@ -29,30 +29,10 @@ var getOutputExample = require('./helpers/get-output-example');
  * ------------------------------------------------------------------------------------------------
  * @param  {Dictionary} optsOrMachineDef
  *           @required {Dictionary} machine
- *                       A machine definition.
+ *                       A machine definition, with action-specific extensions (e.g. `statusCode` in exits)
  *                       Note that the top-level properties of the machine definition may alternatively
  *                       just be included inline amongst the other machine-as-action specific options.
  *                       * * This inline inclusion is the **RECOMMENDED APPROACH** (see README.md). * *
- *
- *           @optional {Dictionary} responses
- *                       A set of static/lift-time response customizations.
- *                       Each key refers to a particular machine exit, and each
- *                       value is a dictionary of settings.
- *                       @default {}
- *
- *                       e.g.
- *                       {
- *                         success: {
- *                           responseType: 'view',       // ("view"|"redirect"|"")
- *                           viewTemplatePath: 'pages/homepage', // (only relevant if `responseType` is "view")
- *                           statusCode: 204             // any valid HTTP status code
- *                         }
- *                       }
- *
- *                       Note that these additional exit-specific response customizations may alternatively
- *                       be included inline in the exits of the machine definition (purely for convenience).
- *                       * * This inline inclusion is the **RECOMMENDED APPROACH** (see README.md). * *
- *
  *
  *           @optional {Array} files
  *                     An array of input code names identifying inputs which expect to
