@@ -146,6 +146,16 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       if (!_.isUndefined(outputExample) && !_.isString(outputExample)) {
         throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitCodeName,util.inspect(outputExample, false, null)));
       }
+
+      // If no outputExample was specified, modify the exit in-memory to make it a string.
+      // This is criticial, otherwise the machine runner will convert the runtime output into an Error instance,
+      // since it'll think the exit isn't expecting any output (note that we also set the `outputExample` local
+      // variable, just for consistency.)
+      if (_.isUndefined(outputExample)) {
+        outputExample = '/some/other/place';
+        exitDef.outputExample = outputExample;
+      }
+
     }
     else if (exitDef.responseType === 'view') {
       // Note that we tolerate `===` so that it can be used for performance reasons.
