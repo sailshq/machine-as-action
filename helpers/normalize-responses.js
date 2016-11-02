@@ -93,10 +93,14 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     // ==============================================================================================================
 
 
-    // If `responseType` is not set, we assume it must be "" (empty string / standard)
-    // unless this is the error exit, in which case we assume it must be `error`.
+    // If `responseType` is not set, we assume it must be "" (empty string / standard), UNLESS:
+    // • if a `viewTemplatePath` was provided, in which case we assume it must be `view`
+    // • or otherwise if this is the error exit, in which case we assume it must be `error`
     if (_.isUndefined(exitDef.responseType)) {
-      if (exitCodeName === 'error') {
+      if (exitDef.viewTemplatePath) {
+        exitDef.responseType = 'view';
+      }
+      else if (exitCodeName === 'error') {
         exitDef.responseType = 'error';
       }
       else {
