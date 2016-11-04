@@ -663,7 +663,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
               // Just send a 400 response with the error encoded as JSON.
-              return res.json(400, err);
+              return res.status(400).json(err);
               // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
               // Note:
               // When Sails v1.0 is released, this (^) will check for `res.badRequest()`,
