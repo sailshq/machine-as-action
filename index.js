@@ -759,10 +759,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                   // >-
                   // Regardless of whether there's unexpected output or not...
-                  //
-                  // Send the response.
-                  return res.status(responses[exitCodeName].statusCode).send();
-                }
+
+                  // Set the status code.
+                  res = res.status(responses[exitCodeName].statusCode);
+
+                  // And send the response.
+                  return res.send();
+
+                }//</ outputExample is undefined > -•
 
                 // • Expecting ref:
                 if (outputExample === '===') {
@@ -777,9 +781,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     return Streamifier.createReadStream(output).pipe(res);
                   }
                   // • else just continue on to our `res.send()` catch-all below
-                }
+                }//>-•
 
                 // • Anything else:  (i.e. rttc.dehydrate())
+                //
+                // TODO: make this smarter or remove it.  (In most cases, it shouldn't be necessary,
+                // since it will have already occurred.)
                 return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
               })(); return; //</case (w/ self-invoking function wrapper)>
