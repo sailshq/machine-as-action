@@ -804,11 +804,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
                   throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
                 }
+
+                // Set status code.
+                res = res.status(responses[exitCodeName].statusCode);
+
                 if (_.isUndefined(output)) {
-                  return res.redirect(responses[exitCodeName].statusCode);
+                  return res.redirect();
                 }
                 else {
-                  return res.redirect(responses[exitCodeName].statusCode, output);
+                  return res.redirect(output);
                 }
                 break;
 
@@ -820,14 +824,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
                 }
 
+                if (!_.isUndefined(output) || !_.isObject(output) || _.isArray(output) || _.isFunction(output)){
+                  throw new Error('Cannot render a view for this request because the provided view locals data (the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  In order to respond with a view, either send through a dictionary (`exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through anything at all.');
+                }
 
-                res.statusCode = responses[exitCodeName].statusCode;
+                // Set status code.
+                res = res.status(responses[exitCodeName].statusCode);
 
                 if (_.isUndefined(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
-                }
-                else if (!_.isObject(output) || _.isArray(output) || _.isFunction(output)){
-                  throw new Error('Cannot render a view for this request because the provided view locals data (the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  In order to respond with a view, either send through a dictionary (`exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through anything at all.');
                 }
                 else {
                   return res.view(responses[exitCodeName].viewTemplatePath, output);
