@@ -111,6 +111,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     // • if a `viewTemplatePath` was provided, in which case we assume it must be `view`
     // • or otherwise if this is the error exit, in which case we assume it must be `error`
     if (_.isUndefined(exitDef.responseType)) {
+
       if (exitDef.viewTemplatePath) {
         exitDef.responseType = 'view';
       }
@@ -120,7 +121,8 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       else {
         exitDef.responseType = ''; // ("" <=> standard)
       }
-    }
+
+    }//>-
 
 
     // Infer appropriate status code:
