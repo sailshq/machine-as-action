@@ -698,36 +698,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // -•
             switch (responses[exitCodeName].responseType) {
 
-              case 'error':
-                if (!res.serverError) {
-                  return res.status(500).send('`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
-                }
-                // Use our output as the argument to `res.serverError()`.
-                var catchallErr = output;
-                // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
-                if (_.isUndefined(output)) {
-                  catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
-                }
-                return res.serverError(catchallErr);
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╔═╗╔╦╗╔═╗╔╗╔╔╦╗╔═╗╦═╗╔╦╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╚═╗ ║ ╠═╣║║║ ║║╠═╣╠╦╝ ║║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝ ╩ ╩ ╩╝╚╝═╩╝╩ ╩╩╚══╩╝
+              case '': (function(){
 
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-              // Currently here strictly for backwards compatibility-
-              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-              case 'status':
-                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-                return res.status(responses[exitCodeName].statusCode).send();
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-              // Currently here strictly for backwards compatibility-
-              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-              case 'json':
-                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-                return res.json(responses[exitCodeName].statusCode, output);
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-              case '':
                 // • Undefined output example:  We take that to mean void...mostly (see below.)
                 var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
                 if (_.isUndefined(outputExample)) {
@@ -797,8 +772,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 // • Anything else:  (i.e. rttc.dehydrate())
                 return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
+              })(); return; //</case (w/ self-invoking function wrapper)>
 
-              case 'redirect':
+
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╦═╗╔═╗╔╦╗╦╦═╗╔═╗╔═╗╔╦╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╠╦╝║╣  ║║║╠╦╝║╣ ║   ║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╩╚═╚═╝═╩╝╩╩╚═╚═╝╚═╝ ╩
+              case 'redirect': (function (){
                 // If `res.redirect()` is missing, we have to complain.
                 // (but if this is a Sails app and this is a Socket request, let the framework handle it)
                 if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
@@ -814,10 +794,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 else {
                   return res.redirect(output);
                 }
-                break;
 
+              })(); return;//</ case (in self-invoking function wrapper) >
 
-              case 'view':
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╦  ╦╦╔═╗╦ ╦
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╚╗╔╝║║╣ ║║║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘   ╚╝ ╩╚═╝╚╩╝
+              case 'view': (function (){
                 // If `res.view()` is missing, we have to complain.
                 // (but if this is a Sails app and this is a Socket request, let the framework handle it)
                 if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
@@ -837,14 +820,57 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 else {
                   return res.view(responses[exitCodeName].viewTemplatePath, output);
                 }
-                break;
 
+              })(); return;//</ case (in self-invoking function wrapper) >
+
+
+
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╔═╗╦═╗╦═╗╔═╗╦═╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ║╣ ╠╦╝╠╦╝║ ║╠╦╝
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝╩╚═╩╚═╚═╝╩╚═
+              case 'error': (function (){
+                if (!res.serverError) {
+                  return res.status(500).send('`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+                }//-•
+
+                // Use our output as the argument to `res.serverError()`.
+                var catchallErr = output;
+                // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
+                if (_.isUndefined(output)) {
+                  catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
+                }
+
+                return res.serverError(catchallErr);
+
+              })(); return;//</ case (in self-invoking function wrapper) >
+
+
+              //  ┬ ┬┌┐┌┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┬┌─┐┌─┐┌┬┐  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐
+              //  │ ││││├┬┘├┤ │  │ ││ ┬││││┌─┘├┤  ││  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤
+              //  └─┘┘└┘┴└─└─┘└─┘└─┘└─┘┘└┘┴└─┘└─┘─┴┘  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘
+
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'status':
+                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+                return res.status(responses[exitCodeName].statusCode).send();
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'json':
+                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+                return res.status(responses[exitCodeName].statusCode).json(output);
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
               default:
                 if (!res.serverError) {
                   return res.status(500).send('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
                 }
                 return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
+
             }//</switch>
           } catch (e) { return res.status(500).send(e); }
         });//</after: waitForSimulatedLatencyIfRelevant>
