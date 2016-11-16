@@ -64,12 +64,25 @@ module.exports = function normalizeResponses (configuredResponses, exits){
 
     // Response type (`responseType`)
     if (!_.isUndefined(exitDef.responseType)) {
-      if (!_.contains(['', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
+
+      // Allow any response type, but make sure it's a string at least.
+      if (!_.isString(exitDef.responseType)) {
         throw flaverr(
           'E_INVALID_RES_METADATA_IN_EXIT_DEF',
-          new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName))
+          new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".  (Should be either omitted, or specified as a string.)', exitDef.responseType, exitCodeName))
         );
-      }
+      }//-•
+
+      // Originally:
+      // ------------
+      // if (!_.contains(['', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
+      //   throw flaverr(
+      //     'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+      //     new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName))
+      //   );
+      // }
+      // ------------
+
     }//>-•
 
     // Status code (`statusCode`)

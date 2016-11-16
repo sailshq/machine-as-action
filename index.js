@@ -883,7 +883,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               default: (function(){
 
                 var declaredResponseType = responses[exitCodeName].responseType;
-                var supposedResponseMethod = res[responseType];
+                var supposedResponseMethod = res[declaredResponseType];
 
                 if (_.isUndefined(supposedResponseMethod)) {
                   throw new Error('Attempting to use `res.'+declaredResponseType+'()`, but there is no such method.  Make sure you\'ve defined `api/responses/'+supposedResponseMethod+'.js`.');
