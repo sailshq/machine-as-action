@@ -73,16 +73,6 @@ module.exports = function normalizeResponses (configuredResponses, exits){
         );
       }//-•
 
-      // Originally:
-      // ------------
-      // if (!_.contains(['', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
-      //   throw flaverr(
-      //     'E_INVALID_RES_METADATA_IN_EXIT_DEF',
-      //     new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName))
-      //   );
-      // }
-      // ------------
-
     }//>-•
 
     // Status code (`statusCode`)
