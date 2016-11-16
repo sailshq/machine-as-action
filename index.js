@@ -230,7 +230,17 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // them with the exit definitions of the machine to build a normalized response mapping that will
   // be cached so it does not need to be recomputed again and again at runtime with each incoming
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
-  var responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+  var responses;
+  try {
+    responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+  } catch (e) {
+    switch (e.code) {
+      case 'E_INVALID_RES_METADATA_IN_EXIT_DEF':
+        // FUTURE: any additional error handling
+        throw e;
+      default: throw e;
+    }
+  }//</catch>
   wetMachine.exits = responses;
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
   // for `options.responses`, it will be irreversibly modified.  Also the exits in the

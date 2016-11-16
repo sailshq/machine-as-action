@@ -4,6 +4,7 @@
 
 var util = require('util');
 var _ = require('lodash');
+var flaverr = require('flaverr');
 var getOutputExample = require('./get-output-example');
 
 
@@ -17,7 +18,8 @@ var getOutputExample = require('./get-output-example');
  *
  * NOTE THAT THIS FUNCTION MUTATES BOTH THE PROVIDED `configuredResponses` AND THE PROVIDED `exits`!
  *
- * @throws {Error} If [machine-as-action doesn't know how to handle something.]
+ * @throws {Error} If exit/response metadata is invalid or if machine-as-action doesn't know how to handle it
+ *         @property {String} code  (===E_INVALID_RES_METADATA_IN_EXIT_DEF)
  */
 module.exports = function normalizeResponses (configuredResponses, exits){
 
@@ -63,7 +65,10 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     // Response type (`responseType`)
     if (!_.isUndefined(exitDef.responseType)) {
       if (!_.contains(['', 'error', 'status', 'json', 'redirect', 'view'], exitDef.responseType)) {
-        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName));
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".', exitDef.responseType, exitCodeName))
+        );
       }
     }//>-•
 
@@ -73,7 +78,10 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       // Ensure it's a number.
       exitDef.statusCode = +exitDef.statusCode;
       if (!_.isNumber(exitDef.statusCode) || _.isNaN(exitDef.statusCode) || exitDef.statusCode < 100 || exitDef.statusCode > 599) {
-        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".  To have this exit infer an appropriate default status code, just omit the `statusCode` property.', exitDef.statusCode, exitCodeName));
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('`machine-as-action` doesn\'t know how to handle the status code ("%s") specified for exit "%s".  To have this exit infer an appropriate default status code, just omit the `statusCode` property.', exitDef.statusCode, exitCodeName))
+        );
       }
 
     }//>-•
@@ -81,7 +89,10 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     // View path (`viewTemplatePath`)
     if (!_.isUndefined(exitDef.viewTemplatePath)) {
       if (exitDef.viewTemplatePath === '' || !_.isString(exitDef.viewTemplatePath)) {
-        throw new Error(util.format('`machine-as-action` doesn\'t know how to handle the view template path ("'+exitDef.viewTemplatePath+'") specified as the `viewTemplatePath` for exit "'+exitCodeName+'".  This should be the relative path to a view file from the `views/` directory, minus the extension (`.ejs`).'));
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('`machine-as-action` doesn\'t know how to handle the view template path ("'+exitDef.viewTemplatePath+'") specified as the `viewTemplatePath` for exit "'+exitCodeName+'".  This should be the relative path to a view file from the `views/` directory, minus the extension (`.ejs`).'))
+        );
       }
     }//>-•
 
@@ -148,8 +159,11 @@ module.exports = function normalizeResponses (configuredResponses, exits){
     if (exitDef.responseType === 'redirect') {
       // Note that we tolerate the absense of an outputExample, since a redirect is assumed to always be a string.
       if (!_.isUndefined(outputExample) && !_.isString(outputExample)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `example` must be a string.  But instead, it\'s: ', exitCodeName,util.inspect(outputExample, false, null)));
-      }
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('Cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `outputExample` must be a string.  But instead, it is: ', exitCodeName,util.inspect(outputExample, false, null)))
+        );
+      }//-•
 
       // If no outputExample was specified, modify the exit in-memory to make it a string.
       // This is criticial, otherwise the machine runner will convert the runtime output into an Error instance,
@@ -171,13 +185,19 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       // Note that we tolerate `===` so that it can be used for performance reasons.
       // If no output example is provided, we treat it like `===`.
       if (!_.isUndefined(outputExample) && outputExample !== '===' && !_.isPlainObject(outputExample)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `example` must be some sort of dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)));
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('Cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `outputExample` must be some sort of dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)))
+        );
       }
     }
     else if (exitDef.responseType === 'json') {
       // ** NOTE THAT THE `json` RESPONSE TYPE IS DEPRECATED **
       if (!_.isUndefined(outputExample) && _.isUndefined(outputExample)) {
-        throw new Error(util.format('`machine-as-action` cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `example` is undefined.', exitCodeName));
+        throw flaverr(
+          'E_INVALID_RES_METADATA_IN_EXIT_DEF',
+          new Error(util.format('Cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `outputExample` is undefined.', exitCodeName))
+        );
       }
     }//>-•
 
