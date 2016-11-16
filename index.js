@@ -807,18 +807,23 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
                 }
 
-                if (!_.isUndefined(output) || !_.isObject(output) || _.isArray(output) || _.isFunction(output)){
-                  throw new Error('Cannot render a view for this request because the provided view locals data (the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  In order to respond with a view, either send through a dictionary (`exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through anything at all.');
-                }
-
                 // Set status code.
                 res = res.status(responses[exitCodeName].statusCode);
 
                 if (_.isUndefined(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
                 }
-                else {
+                else if (_.isObject(output) && !_.isArray(output) && !_.isFunction(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath, output);
+                }
+                else {
+                  throw new Error(
+                    'Cannot render a view for this request because the provided view locals data '+
+                    '(the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  '+
+                    'In order to respond with a view, either send through a dictionary (e.g. '+
+                    '`return exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through '+
+                    'anything at all.  Here is what was passed in: '+util.inspect(output,{depth:null})
+                  );
                 }
 
               })(); return;//</ case (in self-invoking function wrapper) >
@@ -829,8 +834,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ║╣ ╠╦╝╠╦╝║ ║╠╦╝
               //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝╩╚═╩╚═╚═╝╩╚═
               case 'error': (function (){
-                if (!res.serverError) {
-                  return res.status(500).send('`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
+                if (!_.isFunction(res.serverError)) {
+                  throw new Error('`machine-as-action` requires `res.serverError()` to exist as a function in order to use the `error` response type.  Is this a Sails.js app with the responses hook enabled?');
                 }//-•
 
                 // Use our output as the argument to `res.serverError()`.
@@ -845,15 +850,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               })(); return;//</ case (in self-invoking function wrapper) >
 
 
-              //  ┬ ┬┌┐┌┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┬┌─┐┌─┐┌┬┐  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐
-              //  │ ││││├┬┘├┤ │  │ ││ ┬││││┌─┘├┤  ││  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤
-              //  └─┘┘└┘┴└─└─┘└─┘└─┘└─┘┘└┘┴└─┘└─┘─┴┘  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘
-
               ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
               // Currently here strictly for backwards compatibility-
               // this response type may be removed (or more likely have its functionality tweaked) in a future release:
               case 'status':
-                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.  Please use `` (standard) instead (i.e. remove `responseType` from the `'+exitCodeName+'` exit.)');
                 return res.status(responses[exitCodeName].statusCode).send();
               ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -861,18 +862,72 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               // Currently here strictly for backwards compatibility-
               // this response type may be removed (or more likely have its functionality tweaked) in a future release:
               case 'json':
-                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
+                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead (i.e. remove `responseType` from the `'+exitCodeName+'` exit.)');
                 return res.status(responses[exitCodeName].statusCode).json(output);
               ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-              default:
-                if (!res.serverError) {
-                  return res.status(500).send('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
-                }
-                return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
 
-            }//</switch>
-          } catch (e) { return res.status(500).send(e); }
+              //  ┬ ┬┌┐┌┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┬┌─┐┌─┐┌┬┐  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐
+              //  │ ││││├┬┘├┤ │  │ ││ ┬││││┌─┘├┤  ││  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤
+              //  └─┘┘└┘┴└─└─┘└─┘└─┘└─┘┘└┘┴└─┘└─┘─┴┘  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘
+              default: (function(){
+
+                var declaredResponseType = responses[exitCodeName].responseType;
+                var supposedResponseMethod = res[responseType];
+
+                if (_.isUndefined(supposedResponseMethod)) {
+                  throw new Error('Attempting to use `res.'+declaredResponseType+'()`, but there is no such method.  Make sure you\'ve defined `api/responses/'+supposedResponseMethod+'.js`.');
+                }//-•
+
+                if (!_.isFunction(supposedResponseMethod)) {
+                  throw new Error('Attempting to use `res.'+declaredResponseType+'()`, but it is invalid!  Instead of a function, `res.'+declaredResponseType+'` is: '+util.inspect(supposedResponseMethod,{depth:null}));
+                }//-•
+
+                // Otherwise, we recognized this as a (hopefully) usable method on `res`.
+
+                // So first, set the status code.
+                res = res.status(responses[exitCodeName].statusCode);
+
+                // And then try calling the method.
+                try {
+                  supposedResponseMethod(output);
+                } catch (e) { throw new Error('Tried to call `res.'+declaredResponseType+'('+(_.isUndefined(output)?'':'output')+')`, but it threw an error: '+(_.isError(e) ? e.stack : util.inspect(e,{depth:null}))); }
+
+              })(); return; //</default (in self-invoking function wrapper)>
+
+            }//</switch>--•
+          } catch (e) {
+
+            var errAsString;
+            if (_.isError(e)) {
+              errAsString = e.stack;
+            }
+            else {
+              errAsString = util.inspect(e,{depth:null});
+            }
+
+            var errMsg =
+            'Handled a `'+req.method+'` request to  `'+req.path+'`, by running an action, '+
+            'which called its `'+exitCodeName+'` exit.  But then an error occurred: '+errAsString;
+
+            // Log the error.
+            if (_.isObject(sails) && _.isObject(sails.log) && _.isFunction(sails.log.error)) {
+              sails.log.error(errMsg);
+            }
+            else {
+              console.error(errMsg);
+            }
+
+            // Don't send the error in the response in production.
+            if (process.env.NODE_ENV ==='production') {
+              return res.status(500).send();
+            }
+            // Otherwise, send the error message in the response.
+            else {
+              return res.status(500).send(errMsg);
+            }
+
+          }
         });//</after: waitForSimulatedLatencyIfRelevant>
 
       };//</respondApropos>
