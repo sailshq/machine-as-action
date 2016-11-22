@@ -4,7 +4,7 @@
 
 var util = require('util');
 var Readable = require('stream').Readable;
-var _ = require('lodash');
+var _ = require('@sailshq/lodash');
 var Streamifier = require('streamifier');
 var rttc = require('rttc');
 var Machine = require('machine');
@@ -150,7 +150,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // If this is clearly an already "-as-action"-ified thing, then freak out in a more helpful way.
     if (machineDef.IS_MACHINE_AS_ACTION) {
-      var doubleWrapErr = new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
+      var doubleWrapErr = new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`, or somehow otherwise decided to masquerade as an already-instantiated, live machine from MaA!');
       doubleWrapErr.code = 'E_DOUBLE_WRAP';
       throw doubleWrapErr;
     }
@@ -207,8 +207,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           env.res.set('X-Stub', machineDef.identity);
 
           console.warn('Using stub implementation for action (`'+machineDef.identity+'`) because it has no `fn`!\n'+
-          'That means the output sent from this action will be completely fake!  To do this, `machine-as-action` '+
-          'is using the `outputExample` from the success exit and using that as output.\n'+
+          'That means the output sent from this action will be completely fake!  To do this, using the `outputExample` '+
+          'from the success exit and using that as output.\n'+
           '(This warning is being logged because you are in a production environment according to NODE_ENV)');
         }//</if production>
         //>-
@@ -230,7 +230,17 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // them with the exit definitions of the machine to build a normalized response mapping that will
   // be cached so it does not need to be recomputed again and again at runtime with each incoming
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
-  var responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+  var responses;
+  try {
+    responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+  } catch (e) {
+    switch (e.code) {
+      case 'E_INVALID_RES_METADATA_IN_EXIT_DEF':
+        // FUTURE: any additional error handling
+        throw e;
+      default: throw e;
+    }
+  }//</catch>
   wetMachine.exits = responses;
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
   // for `options.responses`, it will be irreversibly modified.  Also the exits in the
@@ -270,10 +280,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // Sails/Express App Requirements
     if (!res.json) {
-      throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('Needs `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
     if (!res.send) {
-      throw new Error('`machine-as-action` requires `res.send()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('Needs `res.send()` to exist (i.e. a Sails.js or Express app)');
     }
 
 
@@ -347,7 +357,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // Handle `files` option (to provide access to upstreams)
     if (_.isArray(options.files)) {
       if (!req.file) {
-        throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
+        throw new Error('In order to use the `files` option, needs `req.file()` to exist (i.e. a Sails.js or Express app using Skipper)');
       }
       _.each(options.files, function (fileParamName){
         // Supply this upstream as an argument for the specified input.
@@ -698,36 +708,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // -•
             switch (responses[exitCodeName].responseType) {
 
-              case 'error':
-                if (!res.serverError) {
-                  return res.status(500).send('`machine-as-action` requires `res.serverError()` to exist (i.e. a Sails.js app with the responses hook enabled) in order to use the `error` response type.');
-                }
-                // Use our output as the argument to `res.serverError()`.
-                var catchallErr = output;
-                // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
-                if (_.isUndefined(output)) {
-                  catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
-                }
-                return res.serverError(catchallErr);
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╔═╗╔╦╗╔═╗╔╗╔╔╦╗╔═╗╦═╗╔╦╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╚═╗ ║ ╠═╣║║║ ║║╠═╣╠╦╝ ║║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝ ╩ ╩ ╩╝╚╝═╩╝╩ ╩╩╚══╩╝
+              case '': (function(){
 
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-              // Currently here strictly for backwards compatibility-
-              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-              case 'status':
-                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-                return res.status(responses[exitCodeName].statusCode).send();
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-              // Currently here strictly for backwards compatibility-
-              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
-              case 'json':
-                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.');
-                return res.json(responses[exitCodeName].statusCode, output);
-              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-              case '':
                 // • Undefined output example:  We take that to mean void...mostly (see below.)
                 var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
                 if (_.isUndefined(outputExample)) {
@@ -774,10 +759,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                   // >-
                   // Regardless of whether there's unexpected output or not...
-                  //
-                  // Send the response.
-                  return res.status(responses[exitCodeName].statusCode).send();
-                }
+
+                  // Set the status code.
+                  res = res.status(responses[exitCodeName].statusCode);
+
+                  // And send the response.
+                  return res.send();
+
+                }//</ outputExample is undefined > -•
 
                 // • Expecting ref:
                 if (outputExample === '===') {
@@ -792,56 +781,170 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     return Streamifier.createReadStream(output).pipe(res);
                   }
                   // • else just continue on to our `res.send()` catch-all below
-                }
+                }//>-•
 
                 // • Anything else:  (i.e. rttc.dehydrate())
+                //
+                // TODO: make this smarter or remove it.  (In most cases, it shouldn't be necessary,
+                // since it will have already occurred.)
                 return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
+              })(); return; //</case (w/ self-invoking function wrapper)>
 
-              case 'redirect':
+
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╦═╗╔═╗╔╦╗╦╦═╗╔═╗╔═╗╔╦╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╠╦╝║╣  ║║║╠╦╝║╣ ║   ║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╩╚═╚═╝═╩╝╩╩╚═╚═╝╚═╝ ╩
+              case 'redirect': (function (){
                 // If `res.redirect()` is missing, we have to complain.
                 // (but if this is a Sails app and this is a Socket request, let the framework handle it)
                 if (!_.isFunction(res.redirect) && !(req._sails && req.isSocket)) {
                   throw new Error('Cannot redirect this request because `res.redirect()` does not exist.  Is this an HTTP request to a conventional server (i.e. Sails.js/Express)?');
                 }
+
+                // Set status code.
+                res = res.status(responses[exitCodeName].statusCode);
+
                 if (_.isUndefined(output)) {
-                  return res.redirect(responses[exitCodeName].statusCode);
+                  return res.redirect();
                 }
                 else {
-                  return res.redirect(responses[exitCodeName].statusCode, output);
+                  return res.redirect(output);
                 }
-                break;
 
+              })(); return;//</ case (in self-invoking function wrapper) >
 
-              case 'view':
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╦  ╦╦╔═╗╦ ╦
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ╚╗╔╝║║╣ ║║║
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘   ╚╝ ╩╚═╝╚╩╝
+              case 'view': (function (){
                 // If `res.view()` is missing, we have to complain.
                 // (but if this is a Sails app and this is a Socket request, let the framework handle it)
                 if (!_.isFunction(res.view) && !(req._sails && req.isSocket)) {
                   throw new Error('Cannot render a view for this request because `res.view()` does not exist.  Are you sure this an HTTP request to a Sails.js server with the views hook enabled?');
                 }
 
-
-                res.statusCode = responses[exitCodeName].statusCode;
+                // Set status code.
+                res = res.status(responses[exitCodeName].statusCode);
 
                 if (_.isUndefined(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
                 }
-                else if (!_.isObject(output) || _.isArray(output) || _.isFunction(output)){
-                  throw new Error('Cannot render a view for this request because the provided view locals data (the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  In order to respond with a view, either send through a dictionary (`exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through anything at all.');
-                }
-                else {
+                else if (_.isObject(output) && !_.isArray(output) && !_.isFunction(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath, output);
                 }
-                break;
-
-
-              default:
-                if (!res.serverError) {
-                  return res.status(500).send('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`');
+                else {
+                  throw new Error(
+                    'Cannot render a view for this request because the provided view locals data '+
+                    '(the value passed in to `exits.'+exitCodeName+'()`) is not a dictionary.  '+
+                    'In order to respond with a view, either send through a dictionary (e.g. '+
+                    '`return exits.'+exitCodeName+'({foo: \'bar\'})`), or don\'t send through '+
+                    'anything at all.  Here is what was passed in: '+util.inspect(output,{depth:null})
+                  );
                 }
-                return res.serverError(new Error('Encountered unexpected error in `machine-as-action`: "unrecognized response type".  Please report this issue at `https://github.com/treelinehq/machine-as-action/issues`'));
-            }//</switch>
-          } catch (e) { return res.status(500).send(e); }
+
+              })(); return;//</ case (in self-invoking function wrapper) >
+
+
+
+              //  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐  ╔═╗╦═╗╦═╗╔═╗╦═╗
+              //  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤   ║╣ ╠╦╝╠╦╝║ ║╠╦╝
+              //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝╩╚═╩╚═╚═╝╩╚═
+              case 'error': (function (){
+                if (!_.isFunction(res.serverError)) {
+                  throw new Error('Need `res.serverError()` to exist as a function in order to use the `error` response type.  Is this a Sails.js app with the responses hook enabled?');
+                }//-•
+
+                // Use our output as the argument to `res.serverError()`.
+                var catchallErr = output;
+                // ...unless there is NO output, in which case we build an error message explaining what happened and pass THAT in.
+                if (_.isUndefined(output)) {
+                  catchallErr = new Error(util.format('Action (triggered by a `%s` request to  `%s`) encountered an error, triggering its "%s" exit. No additional error data was provided.', req.method, req.path, exitCodeName) );
+                }
+
+                return res.serverError(catchallErr);
+
+              })(); return;//</ case (in self-invoking function wrapper) >
+
+
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'status':
+                console.warn('The `status` response type will be deprecated in an upcoming release.  Please use `` (standard) instead.  Please use `` (standard) instead (i.e. remove `responseType` from the `'+exitCodeName+'` exit.)');
+                return res.status(responses[exitCodeName].statusCode).send();
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+              // Currently here strictly for backwards compatibility-
+              // this response type may be removed (or more likely have its functionality tweaked) in a future release:
+              case 'json':
+                console.warn('The `json` response type will be deprecated in an upcoming release.  Please use `` (standard) instead (i.e. remove `responseType` from the `'+exitCodeName+'` exit.)');
+                return res.status(responses[exitCodeName].statusCode).json(output);
+              ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+              //  ┬ ┬┌┐┌┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┬┌─┐┌─┐┌┬┐  ┬─┐┌─┐┌─┐┌─┐┌─┐┌┐┌┌─┐┌─┐  ┌┬┐┬ ┬┌─┐┌─┐
+              //  │ ││││├┬┘├┤ │  │ ││ ┬││││┌─┘├┤  ││  ├┬┘├┤ └─┐├─┘│ ││││└─┐├┤    │ └┬┘├─┘├┤
+              //  └─┘┘└┘┴└─└─┘└─┘└─┘└─┘┘└┘┴└─┘└─┘─┴┘  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘
+              default: (function(){
+
+                var declaredResponseType = responses[exitCodeName].responseType;
+                var supposedResponseMethod = res[declaredResponseType];
+
+                if (_.isUndefined(supposedResponseMethod)) {
+                  throw new Error('Attempting to use `res.'+declaredResponseType+'()`, but there is no such method.  Make sure you\'ve defined `api/responses/'+supposedResponseMethod+'.js`.');
+                }//-•
+
+                if (!_.isFunction(supposedResponseMethod)) {
+                  throw new Error('Attempting to use `res.'+declaredResponseType+'()`, but it is invalid!  Instead of a function, `res.'+declaredResponseType+'` is: '+util.inspect(supposedResponseMethod,{depth:null}));
+                }//-•
+
+                // Otherwise, we recognized this as a (hopefully) usable method on `res`.
+
+                // So first, set the status code.
+                res = res.status(responses[exitCodeName].statusCode);
+
+                // And then try calling the method.
+                try {
+                  supposedResponseMethod(output);
+                } catch (e) { throw new Error('Tried to call `res.'+declaredResponseType+'('+(_.isUndefined(output)?'':'output')+')`, but it threw an error: '+(_.isError(e) ? e.stack : util.inspect(e,{depth:null}))); }
+
+              })(); return; //</default (in self-invoking function wrapper)>
+
+            }//</switch>--•
+          } catch (e) {
+
+            var errAsString;
+            if (_.isError(e)) {
+              errAsString = e.stack;
+            }
+            else {
+              errAsString = util.inspect(e,{depth:null});
+            }
+
+            var errMsg =
+            'Handled a `'+req.method+'` request to  `'+req.path+'`, by running an action, '+
+            'which called its `'+exitCodeName+'` exit.  But then an error occurred: '+errAsString;
+
+            // Log the error.
+            if (_.isObject(sails) && _.isObject(sails.log) && _.isFunction(sails.log.error)) {
+              sails.log.error(errMsg);
+            }
+            else {
+              console.error(errMsg);
+            }
+
+            // Don't send the error in the response in production.
+            if (process.env.NODE_ENV ==='production') {
+              return res.status(500).send();
+            }
+            // Otherwise, send the error message in the response.
+            else {
+              return res.status(500).send(errMsg);
+            }
+
+          }
         });//</after: waitForSimulatedLatencyIfRelevant>
 
       };//</respondApropos>
