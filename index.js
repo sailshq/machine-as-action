@@ -150,7 +150,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // If this is clearly an already "-as-action"-ified thing, then freak out in a more helpful way.
     if (machineDef.IS_MACHINE_AS_ACTION) {
-      var doubleWrapErr = new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`!');
+      var doubleWrapErr = new Error('Cannot build action: Provided machine definition appears to have already been run through `machine-as-action`, or somehow otherwise decided to masquerade as an already-instantiated, live machine from MaA!');
       doubleWrapErr.code = 'E_DOUBLE_WRAP';
       throw doubleWrapErr;
     }
@@ -207,8 +207,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           env.res.set('X-Stub', machineDef.identity);
 
           console.warn('Using stub implementation for action (`'+machineDef.identity+'`) because it has no `fn`!\n'+
-          'That means the output sent from this action will be completely fake!  To do this, `machine-as-action` '+
-          'is using the `outputExample` from the success exit and using that as output.\n'+
+          'That means the output sent from this action will be completely fake!  To do this, using the `outputExample` '+
+          'from the success exit and using that as output.\n'+
           '(This warning is being logged because you are in a production environment according to NODE_ENV)');
         }//</if production>
         //>-
@@ -280,10 +280,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // Sails/Express App Requirements
     if (!res.json) {
-      throw new Error('`machine-as-action` requires `res.json()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('Needs `res.json()` to exist (i.e. a Sails.js or Express app)');
     }
     if (!res.send) {
-      throw new Error('`machine-as-action` requires `res.send()` to exist (i.e. a Sails.js or Express app)');
+      throw new Error('Needs `res.send()` to exist (i.e. a Sails.js or Express app)');
     }
 
 
@@ -357,7 +357,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     // Handle `files` option (to provide access to upstreams)
     if (_.isArray(options.files)) {
       if (!req.file) {
-        throw new Error('In order to use the `files` option, `machine-as-action` requires `req.file()` to exist (i.e. a Sails.js, Express, or Hapi app using Skipper)');
+        throw new Error('In order to use the `files` option, needs `req.file()` to exist (i.e. a Sails.js or Express app using Skipper)');
       }
       _.each(options.files, function (fileParamName){
         // Supply this upstream as an argument for the specified input.
@@ -852,7 +852,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝╩╚═╩╚═╚═╝╩╚═
               case 'error': (function (){
                 if (!_.isFunction(res.serverError)) {
-                  throw new Error('`machine-as-action` requires `res.serverError()` to exist as a function in order to use the `error` response type.  Is this a Sails.js app with the responses hook enabled?');
+                  throw new Error('Need `res.serverError()` to exist as a function in order to use the `error` response type.  Is this a Sails.js app with the responses hook enabled?');
                 }//-•
 
                 // Use our output as the argument to `res.serverError()`.
