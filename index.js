@@ -4,7 +4,7 @@
 
 var util = require('util');
 var Readable = require('stream').Readable;
-var _ = require('lodash');
+var _ = require('@sailshq/lodash');
 var Streamifier = require('streamifier');
 var rttc = require('rttc');
 var Machine = require('machine');
