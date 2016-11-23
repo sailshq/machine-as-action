@@ -1,6 +1,6 @@
 var util = require('util');
 var assert = require('assert');
-var _ = require('lodash');
+var _ = require('@sailshq/lodash');
 var testRoute = require('./util/test-route.util');
 
 

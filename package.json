@@ -1,6 +1,6 @@
 {
   "name": "machine-as-action",
-  "version": "7.0.11",
+  "version": "7.1.0-0",
   "description": "Run a machine from an HTTP or WebSocket request.",
   "scripts": {
     "test": "node ./node_modules/mocha/bin/mocha -t 8000"
@@ -19,7 +19,8 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "lodash": "3.10.1",
+    "flaverr": "^1.0.0",
+    "@sailshq/lodash": "^3.10.2",
     "machine": "^13.0.0-0",
     "rttc": "^9.7.0",
     "streamifier": "0.1.1"
