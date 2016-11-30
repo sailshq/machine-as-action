@@ -672,36 +672,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               };//</define :: err.toJSON()>
 
 
-              // Just send a 400 response with the error encoded as JSON.
-              return res.status(400).json(err);
-              // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
-              // Note:
-              // When Sails v1.0 is released, this (^) will check for `res.badRequest()`,
-              // and call that custom response method instead (if it exists).
-              //
-              // But as of v0.12.4, Sails core marshals this error (e.g. `err`) before
-              // passing it through to `res.badRequest()`.  This dehydrates it, which
-              // is usually not a bad idea.  But it also causes our toJSON() logic to be
-              // skipped.  And that part is kind of lame.
-              //
-              // Unfortunately, changing this in Sails would be one of the more insidious
-              // sorts of breaking changes, and I'm not doing it until we publish the first
-              // major version (v1.0).  So, for the time being, machine-as-action always
-              // calls res.json() directly instead.
-              //
-              // For more information, see:
-              //  • https://github.com/balderdashy/sails/commit/b8c3813281a041c0b24db381b046fecfa81a14b7#commitcomment-18455430
-              //  • http://mikermcneil.com/post/148171019987/sails-v1-first-look
-              //
-              // ```
-              // if (_.isFunction(res.badRequest)) {
-              //   return res.badRequest(err);
-              // }
-              // else {
-              //   return res.json(400, err);
-              // }
-              // ```
-              // -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -
+              // If `res.badRequest` exists, use that.
+              if (_.isFunction(res.badRequest)) {
+                return res.badRequest(err);
+              }
+              // Otherwise just send a 400 response with the error encoded as JSON.
+              else {
+                return res.status(400).json(err);
+              }
+
             }//</if :: machine runtime validation error (E_MACHINE_RUNTIME_VALIDATION)>
 
 
