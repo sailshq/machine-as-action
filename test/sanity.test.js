@@ -672,76 +672,76 @@ testRoute('`redirect` with custom status code', {
 
 
 
-var _loggerRan;
-var _loggerRanWithArgs;
-testRoute('should call `logDebugOutputFn` with expected argument', {
-  logDebugOutputFn: function (unexpectedOutput) {
-    _loggerRan = true;
-    _loggerRanWithArgs = Array.prototype.slice.call(arguments);
-  },
-  machine: {
-    inputs: {},
-    exits: {
-      notFound: {
-        description: 'Something fake happened.  Because this is fake.'
-      }
-    },
-    fn: function (inputs, exits) {
-      return exits.notFound(new Error('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
-    }
-  },
-}, function (err, resp, body, done){
+// var _loggerRan;
+// var _loggerRanWithArgs;
+// testRoute('should call `logDebugOutputFn` with expected argument', {
+//   logDebugOutputFn: function (unexpectedOutput) {
+//     _loggerRan = true;
+//     _loggerRanWithArgs = Array.prototype.slice.call(arguments);
+//   },
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       notFound: {
+//         description: 'Something fake happened.  Because this is fake.'
+//       }
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.notFound(new Error('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+//     }
+//   },
+// }, function (err, resp, body, done){
 
-  try {
-    assert(err);
-    assert.equal(err.status, 500);
-  } catch (e) { return done(e); }
+//   try {
+//     assert(err);
+//     assert.equal(err.status, 500);
+//   } catch (e) { return done(e); }
 
-  if (!_loggerRan) {
-    return done(new Error('Consistency violation: Should have run custom log function!  (But `_loggerRan` was not true!)'));
-  }
-  if (!_.isArray(_loggerRanWithArgs) || _loggerRanWithArgs.length !== 1) {
-    return done(new Error('Consistency violation: `_loggerRanWithArgs` should be a single-item array!  Maybe the wrong stuff was passed in to the custom log function from inside machine-as-action...'));
-  }
+//   if (!_loggerRan) {
+//     return done(new Error('Consistency violation: Should have run custom log function!  (But `_loggerRan` was not true!)'));
+//   }
+//   if (!_.isArray(_loggerRanWithArgs) || _loggerRanWithArgs.length !== 1) {
+//     return done(new Error('Consistency violation: `_loggerRanWithArgs` should be a single-item array!  Maybe the wrong stuff was passed in to the custom log function from inside machine-as-action...'));
+//   }
 
-  try {
-    assert(_.isError(_loggerRanWithArgs[0]));
-    assert(_loggerRanWithArgs[0].message.match('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
-  } catch (e) { return done(e); }
+//   try {
+//     assert(_.isError(_loggerRanWithArgs[0]));
+//     assert(_loggerRanWithArgs[0].message.match('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+//   } catch (e) { return done(e); }
 
-  return done();
-});
-
-
+//   return done();
+// });
 
 
 
 
-var _loggerRanButItShouldntHave;
-testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
-  logDebugOutputFn: function (unexpectedOutput) {
-    _loggerRanButItShouldntHave = true;
-  },
-  machine: {
-    inputs: {},
-    exits: {
-      notFound: {
-        description: 'Something fake happened.  Because this is fake.'
-      }
-    },
-    fn: function (inputs, exits) {
-      return exits.notFound();
-    }
-  },
-}, function (err, resp, body, done){
-  // Should get error even though nothing was passed through
-  // (the machine runner builds this automatically)
-  try {
-    assert(_.isError(err));
-  } catch (e) { return done(e); }
 
-  return done();
-});
+
+// var _loggerRanButItShouldntHave;
+// testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
+//   logDebugOutputFn: function (unexpectedOutput) {
+//     _loggerRanButItShouldntHave = true;
+//   },
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       notFound: {
+//         description: 'Something fake happened.  Because this is fake.'
+//       }
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.notFound();
+//     }
+//   },
+// }, function (err, resp, body, done){
+//   // Should get error even though nothing was passed through
+//   // (the machine runner builds this automatically)
+//   try {
+//     assert(_.isError(err));
+//   } catch (e) { return done(e); }
+
+//   return done();
+// });
 
 
 

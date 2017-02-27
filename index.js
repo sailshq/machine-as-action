@@ -692,60 +692,70 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝ ╩ ╩ ╩╝╚╝═╩╝╩ ╩╩╚══╩╝
               case '': (function(){
 
-                // • Undefined output example:  We take that to mean void...mostly (see below.)
+                // Get the output example from the exit.
                 var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
+
+                // Default the output example to `===`.
                 if (_.isUndefined(outputExample)) {
+                  outputExample = '===';
+                }
 
-                  // Expose a more specific varname for clarity.
-                  var unexpectedOutput = output;
+                // Future: reactivate the code below, but only when a `strict: true` or similar setting
+                // is set on a route.
+                // ------------------------------------------------------------------------------------
+                // • Undefined output example:  We take that to mean void...mostly (see below.)
+                // if (_.isUndefined(outputExample)) {
 
-                  // Technically the machine `fn` could still send through data.
-                  // No matter what, we NEVER send that runtime data to the response.
-                  //
-                  // BUT we still log that data to the console using `sails.log.warn()` if available
-                  // (otherwise `console.warn()`).  We use an overridable log function to do this.
-                  if (!_.isUndefined(unexpectedOutput)) {
+                //   // Expose a more specific varname for clarity.
+                //   var unexpectedOutput = output;
 
-                    try {
-                      // If provided, use custom implementation.
-                      if (!_.isUndefined(options.logDebugOutputFn)) {
-                        options.logDebugOutputFn(unexpectedOutput);
-                      }
-                      // Otherwise, use the default implementation:
-                      else {
-                        var logMsg = 'Received incoming request (`'+req.method+' '+req.path+'`) '+
-                                     'and ran action (`'+machineDef.identity+'`), which exited with '+
-                                     'its `'+exitCodeName+'` response and the following data:\n'+
-                                     util.inspect(unexpectedOutput, {depth: null})+
-                                     '\n'+
-                                     '(^^ this data was not sent in the response)';
+                //   // Technically the machine `fn` could still send through data.
+                //   // No matter what, we NEVER send that runtime data to the response.
+                //   //
+                //   // BUT we still log that data to the console using `sails.log.warn()` if available
+                //   // (otherwise `console.warn()`).  We use an overridable log function to do this.
+                //   if (!_.isUndefined(unexpectedOutput)) {
 
-                        // Only log unexpected output in development.
-                        if (!IS_RUNNING_IN_PRODUCTION) {
+                //     try {
+                //       // If provided, use custom implementation.
+                //       if (!_.isUndefined(options.logDebugOutputFn)) {
+                //         options.logDebugOutputFn(unexpectedOutput);
+                //       }
+                //       // Otherwise, use the default implementation:
+                //       else {
+                //         var logMsg = 'Received incoming request (`'+req.method+' '+req.path+'`) '+
+                //                      'and ran action (`'+machineDef.identity+'`), which exited with '+
+                //                      'its `'+exitCodeName+'` response and the following data:\n'+
+                //                      util.inspect(unexpectedOutput, {depth: null})+
+                //                      '\n'+
+                //                      '(^^ this data was not sent in the response)';
 
-                          if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
-                            req._sails.log.debug(logMsg);
-                          }
-                          else {
-                            console.warn(logMsg);
-                          }
+                //         // Only log unexpected output in development.
+                //         if (!IS_RUNNING_IN_PRODUCTION) {
 
-                        }//</if we're in development mode, log unexpected output>
+                //           if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
+                //             req._sails.log.debug(logMsg);
+                //           }
+                //           else {
+                //             console.warn(logMsg);
+                //           }
 
-                      }//</default implementation to handle logging unexpected output>
-                    } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
-                  }//</if there is unexpected output sent through callback within `fn` at runtime>
+                //         }//</if we're in development mode, log unexpected output>
 
-                  // >-
-                  // Regardless of whether there's unexpected output or not...
+                //       }//</default implementation to handle logging unexpected output>
+                //     } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
+                //   }//</if there is unexpected output sent through callback within `fn` at runtime>
 
-                  // Set the status code.
-                  res = res.status(responses[exitCodeName].statusCode);
+                //   // >-
+                //   // Regardless of whether there's unexpected output or not...
 
-                  // And send the response.
-                  return res.send();
+                //   // Set the status code.
+                //   res = res.status(responses[exitCodeName].statusCode);
 
-                }//</ outputExample is undefined > -•
+                //   // And send the response.
+                //   return res.send();
+
+                // }//</ outputExample is undefined > -•
 
                 // • Expecting ref:
                 if (outputExample === '===') {
@@ -764,7 +774,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                 // • Anything else:  (i.e. rttc.dehydrate())
                 //
-                // TODO: make this smarter or remove it.  (In most cases, it shouldn't be necessary,
+                // • Handle errors with custom toJSON:
+                if (_.isError(output) && _.isFunction(output.toJSON)) {
+                  output = output.toJSON();
+                }
+
+                // TODO: make this smarter or remove it.  (In many cases, dehydrate shouldn't be necessary,
                 // since it will have already occurred.)
                 return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
