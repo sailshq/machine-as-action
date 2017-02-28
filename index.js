@@ -775,6 +775,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   // Note that we don't use the `stack`, since `res.badRequest()` might be used in production,
                   // and we wouldn't want to inadvertently dump a stack trace.
                   if (_.isError(output)) {
+
+                    // Set the status code.
+                    res = res.status(responses[exitCodeName].statusCode);
+
                     if (!_.isFunction(output.toJSON)) {
                       // No need to JSON stringify (this is already a string).
                       return res.send(util.inspect(output));
