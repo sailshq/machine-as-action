@@ -220,6 +220,22 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     };
   }
 
+
+  // Mutate the machine definition.
+  // (In the current version of machine-as-action, as a way of minimizing complexity, we treat void exits
+  // as if they are `outputExample: '==='`.  But to do this, we have to change the def beforehand.)
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // FUTURE: Make this behavior configurable.
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  _.each(_.keys(machineDef.exits), function(exitCodeName) {
+    var exitDef = machineDef.exits[exitCodeName];
+    if (_.isUndefined(exitDef.outputExample)) {
+      exitDef.outputExample = '===';
+    }
+  });
+
+
+
   // Build machine instance: a "wet" machine.
   // (This is just like a not-yet-configured "part" or "machine instruction".)
   //
@@ -749,6 +765,25 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                 // • Expecting ref:
                 if (outputExample === '===') {
+
+                  // If `null`, use res.sendStatus().
+                  if (_.isNull(output)) {
+                    return res.sendStatus(responses[exitCodeName].statusCode);
+                  }
+                  // If the output is an Error instance and it doesn't have a custom .toJSON(),
+                  // then util.inspect() it instead (otherwise res.json() will turn it into an empty dictionary).
+                  // Note that we don't use the `stack`, since `res.badRequest()` might be used in production,
+                  // and we wouldn't want to inadvertently dump a stack trace.
+                  if (_.isError(output)) {
+                    if (!_.isFunction(output.toJSON)) {
+                      // No need to JSON stringify (this is already a string).
+                      return res.send(util.inspect(output));
+                    }
+                    else {
+                      return res.json(output);
+                    }
+                  }//-•
+
                   // • Readable stream
                   if (output instanceof Readable) {
                     res.status(responses[exitCodeName].statusCode);
@@ -762,10 +797,22 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   // • else just continue on to our `res.send()` catch-all below
                 }//>-•
 
+
+                // • Actual output is number:
+                //
+                // If this is a number, handle it as a special case to avoid tricking Express
+                // into thinking it is a status code.
+                if (_.isNumber(output)) {
+                  return res.status(responses[exitCodeName].statusCode).json(output);
+                }//-•
+
+
                 // • Anything else:  (i.e. rttc.dehydrate())
                 //
-                // TODO: make this smarter or remove it.  (In most cases, it shouldn't be necessary,
-                // since it will have already occurred.)
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                // FUTURE: make this `rttc.dehydrate()` call smarter or remove it.
+                // (In most cases, it shouldn't be necessary, since it will have already occurred.)
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 return res.status(responses[exitCodeName].statusCode).send(rttc.dehydrate(output, true));
 
               })(); return; //</case (w/ self-invoking function wrapper)>
