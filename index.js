@@ -963,8 +963,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             'which called its `'+exitCodeName+'` exit.  But then an error occurred: '+errAsString;
 
             // Log the error.
-            if (_.isObject(sails) && _.isObject(sails.log) && _.isFunction(sails.log.error)) {
-              sails.log.error(errMsg);
+            if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.error)) {
+              req._sails.log.error(errMsg);
             }
             else {
               console.error(errMsg);
