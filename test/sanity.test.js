@@ -157,9 +157,9 @@ testRoute('ignore extra parameters', {
   },
 }, function (err, resp, body, done){
   if (err) { return done(err); }
-  if (body !== undefined) {
+  if (body !== 'OK') {
     // NOTE: this is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
-    return done(new Error('should have gotten `undefined` as the response body, but instead got: '+util.inspect(body)));
+    return done(new Error('should have gotten `OK` as the response body, but instead got: '+util.inspect(body)));
   }
   return done();
 });
@@ -344,9 +344,7 @@ testRoute('customizing success exit to use a special status code in the response
   if (resp.statusCode !== 201) {
     return done(new Error('Should have responded with a 201 status code (instead got '+resp.statusCode+')'));
   }
-  if (!_.isUndefined(body)) {
-    return done(new Error('Should not have sent a response body (but got '+body+')'));
-  }
+  assert.equal(body, 'Created');
   return done();
 });
 
@@ -672,76 +670,76 @@ testRoute('`redirect` with custom status code', {
 
 
 
-var _loggerRan;
-var _loggerRanWithArgs;
-testRoute('should call `logDebugOutputFn` with expected argument', {
-  logDebugOutputFn: function (unexpectedOutput) {
-    _loggerRan = true;
-    _loggerRanWithArgs = Array.prototype.slice.call(arguments);
-  },
-  machine: {
-    inputs: {},
-    exits: {
-      notFound: {
-        description: 'Something fake happened.  Because this is fake.'
-      }
-    },
-    fn: function (inputs, exits) {
-      return exits.notFound(new Error('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
-    }
-  },
-}, function (err, resp, body, done){
+// var _loggerRan;
+// var _loggerRanWithArgs;
+// testRoute('should call `logDebugOutputFn` with expected argument', {
+//   logDebugOutputFn: function (unexpectedOutput) {
+//     _loggerRan = true;
+//     _loggerRanWithArgs = Array.prototype.slice.call(arguments);
+//   },
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       notFound: {
+//         description: 'Something fake happened.  Because this is fake.'
+//       }
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.notFound(new Error('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+//     }
+//   },
+// }, function (err, resp, body, done){
 
-  try {
-    assert(err);
-    assert.equal(err.status, 500);
-  } catch (e) { return done(e); }
+//   try {
+//     assert(err);
+//     assert.equal(err.status, 500);
+//   } catch (e) { return done(e); }
 
-  if (!_loggerRan) {
-    return done(new Error('Consistency violation: Should have run custom log function!  (But `_loggerRan` was not true!)'));
-  }
-  if (!_.isArray(_loggerRanWithArgs) || _loggerRanWithArgs.length !== 1) {
-    return done(new Error('Consistency violation: `_loggerRanWithArgs` should be a single-item array!  Maybe the wrong stuff was passed in to the custom log function from inside machine-as-action...'));
-  }
+//   if (!_loggerRan) {
+//     return done(new Error('Consistency violation: Should have run custom log function!  (But `_loggerRan` was not true!)'));
+//   }
+//   if (!_.isArray(_loggerRanWithArgs) || _loggerRanWithArgs.length !== 1) {
+//     return done(new Error('Consistency violation: `_loggerRanWithArgs` should be a single-item array!  Maybe the wrong stuff was passed in to the custom log function from inside machine-as-action...'));
+//   }
 
-  try {
-    assert(_.isError(_loggerRanWithArgs[0]));
-    assert(_loggerRanWithArgs[0].message.match('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
-  } catch (e) { return done(e); }
+//   try {
+//     assert(_.isError(_loggerRanWithArgs[0]));
+//     assert(_loggerRanWithArgs[0].message.match('Could not find targets.  Puppies are still lost.  Maybe call Cruella?'));
+//   } catch (e) { return done(e); }
 
-  return done();
-});
-
-
+//   return done();
+// });
 
 
 
 
-var _loggerRanButItShouldntHave;
-testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
-  logDebugOutputFn: function (unexpectedOutput) {
-    _loggerRanButItShouldntHave = true;
-  },
-  machine: {
-    inputs: {},
-    exits: {
-      notFound: {
-        description: 'Something fake happened.  Because this is fake.'
-      }
-    },
-    fn: function (inputs, exits) {
-      return exits.notFound();
-    }
-  },
-}, function (err, resp, body, done){
-  // Should get error even though nothing was passed through
-  // (the machine runner builds this automatically)
-  try {
-    assert(_.isError(err));
-  } catch (e) { return done(e); }
 
-  return done();
-});
+
+// var _loggerRanButItShouldntHave;
+// testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
+//   logDebugOutputFn: function (unexpectedOutput) {
+//     _loggerRanButItShouldntHave = true;
+//   },
+//   machine: {
+//     inputs: {},
+//     exits: {
+//       notFound: {
+//         description: 'Something fake happened.  Because this is fake.'
+//       }
+//     },
+//     fn: function (inputs, exits) {
+//       return exits.notFound();
+//     }
+//   },
+// }, function (err, resp, body, done){
+//   // Should get error even though nothing was passed through
+//   // (the machine runner builds this automatically)
+//   try {
+//     assert(_.isError(err));
+//   } catch (e) { return done(e); }
+
+//   return done();
+// });
 
 
 
