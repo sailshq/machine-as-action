@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "mocha": "2.5.3",
-    "sails": "^0.12.3"
+    "sails": "^1.0.0-0"
   },
   "repository": {
     "type": "git",
