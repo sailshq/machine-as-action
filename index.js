@@ -931,6 +931,15 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 // So first, set the status code.
                 res = res.status(responses[exitCodeName].statusCode);
 
+                // Handle special case of `null` output.
+                // (Because, when preparing a standard response, we treat `null` as equivalent to undefined.)
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                // FUTURE: Potentially remove this.  See other "FUTURE" blocks in this file for more information/context.
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                if (_.isNull(output)) {
+                  output = undefined;
+                }
+
                 // And then try calling the method.
                 try {
                   supposedResponseMethod(output);
