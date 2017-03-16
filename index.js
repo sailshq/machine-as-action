@@ -227,6 +227,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // FUTURE: Make this behavior configurable.
   // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // Ensure the machine def has "success" and "error" exits.
+  machineDef.exits = machineDef.exits || {};
+  _.defaults(machineDef.exits, {
+    error: { description: 'An unexpected error occurred.' },
+    success: { description: 'Done.' }
+  });
   _.each(_.keys(machineDef.exits), function(exitCodeName) {
     var exitDef = machineDef.exits[exitCodeName];
     if (_.isUndefined(exitDef.outputExample)) {
