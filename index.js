@@ -863,7 +863,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 // Set status code.
                 res = res.status(responses[exitCodeName].statusCode);
 
-                if (_.isUndefined(output)) {
+                if (_.isUndefined(output) || _.isNull(output)) {
                   return res.view(responses[exitCodeName].viewTemplatePath);
                 }
                 else if (_.isObject(output) && !_.isArray(output) && !_.isFunction(output)) {
