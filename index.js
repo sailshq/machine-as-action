@@ -765,7 +765,25 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   res = res.status(responses[exitCodeName].statusCode);
 
                   // And send the response.
-                  if (res.headersSent) { return res.end(); }
+                  if (res.finished) {
+                    // If res.end() has already been called somehow, then this is definitely an error.
+                    // Currently, in this case, we handle this simply by trying to call res.send(),
+                    // deliberately causing the normal "headers were already sent" error.
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
+                    // a response to this request more than once!  Note that the case of triggering
+                    // more than one exit, or the same exit more than once, is already handled w/ a
+                    // custom error msg elsewhere)
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    return res.send();
+                  }
+                  else if (res.headersSent) {
+                    // Calling `exits.success()` after having done res.write() calls
+                    // earlier (and thus sending headers) is fine-- as long as you
+                    // haven't done something that ended the response yet.
+                    //  We gracefully tolerate it here.
+                    return res.end();
+                  }
                   else { return res.send(); }
 
                 }//</ outputExample is undefined > -•
