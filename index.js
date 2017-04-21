@@ -765,7 +765,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   res = res.status(responses[exitCodeName].statusCode);
 
                   // And send the response.
-                  return res.send();
+                  if (res.headersSent) { return res.end(); }
+                  else { return res.send(); }
 
                 }//</ outputExample is undefined > -•
 
