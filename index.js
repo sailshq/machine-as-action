@@ -587,49 +587,53 @@ module.exports = function machineAsAction(optsOrMachineDef) {
           // an asynchronous execution context.
           try {
 
-            // Unless being prevented with the `disableXExitHeader` option,
-            // encode exit code name as the `X-Exit` response header.
-            if (!options.disableXExitHeader) {
-              res.set('X-Exit', exitCodeName);
-            }
+            if (!res.headersSent) {
 
-            // If running in development and development headers have not been explicitly disabled,
-            // then send down other available metadata about the exit for convenience for developers
-            // integrating with this API endpoint.
-            var doSendDevHeaders = (
-              !IS_RUNNING_IN_PRODUCTION &&
-              !options.disableDevelopmentHeaders
-            );
-            if (doSendDevHeaders) {
-              var responseInfo = responses[exitCodeName];
-              if (responseInfo.friendlyName) {
-                res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
+              // Unless being prevented with the `disableXExitHeader` option,
+              // encode exit code name as the `X-Exit` response header.
+              if (!options.disableXExitHeader) {
+                res.set('X-Exit', exitCodeName);
               }
-              if (responseInfo.description) {
-                res.set('X-Exit-Description', responseInfo.description);
-              }
-              if (responseInfo.extendedDescription) {
-                res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
-              }
-              if (responseInfo.moreInfoUrl) {
-                res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
-              }
-              // Only include output headers if there _is_ output and
-              // this is a standard response:
-              if (responseInfo.responseType === '' && !_.isUndefined(output)) {
-                if (responseInfo.outputFriendlyName) {
-                  res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+
+              // If running in development and development headers have not been explicitly disabled,
+              // then send down other available metadata about the exit for convenience for developers
+              // integrating with this API endpoint.
+              var doSendDevHeaders = (
+                !IS_RUNNING_IN_PRODUCTION &&
+                !options.disableDevelopmentHeaders
+              );
+              if (doSendDevHeaders) {
+                var responseInfo = responses[exitCodeName];
+                if (responseInfo.friendlyName) {
+                  res.set('X-Exit-Friendly-Name', responseInfo.friendlyName);
                 }
-                if (responseInfo.outputDescription) {
-                  res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+                if (responseInfo.description) {
+                  res.set('X-Exit-Description', responseInfo.description);
                 }
-              }
-              // Otherwise if this is a view response, include the view path.
-              else if (responseInfo.responseType === 'view') {
-                res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
-              }
-            }//</if running in a non-production environment without development headers explicitly disabled>
-            // >-
+                if (responseInfo.extendedDescription) {
+                  res.set('X-Exit-Extended-Description', responseInfo.extendedDescription);
+                }
+                if (responseInfo.moreInfoUrl) {
+                  res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl);
+                }
+                // Only include output headers if there _is_ output and
+                // this is a standard response:
+                if (responseInfo.responseType === '' && !_.isUndefined(output)) {
+                  if (responseInfo.outputFriendlyName) {
+                    res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName);
+                  }
+                  if (responseInfo.outputDescription) {
+                    res.set('X-Exit-Output-Description', responseInfo.outputDescription);
+                  }
+                }
+                // Otherwise if this is a view response, include the view path.
+                else if (responseInfo.responseType === 'view') {
+                  res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath);
+                }
+              }//</if running in a non-production environment without development headers explicitly disabled>
+              // >-
+              //
+            }
 
 
             // If this is the handler for the error exit, and it's clear from the output
@@ -765,12 +769,51 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   res = res.status(responses[exitCodeName].statusCode);
 
                   // And send the response.
-                  return res.send();
+                  if (res.finished) {
+                    // If res.end() has already been called somehow, then this is definitely an error.
+                    // Currently, in this case, we handle this simply by trying to call res.send(),
+                    // deliberately causing the normal "headers were already sent" error.
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
+                    // a response to this request more than once!  Note that the case of triggering
+                    // more than one exit, or the same exit more than once, is already handled w/ a
+                    // custom error msg elsewhere)
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    return res.send();
+                  }
+                  else if (res.headersSent) {
+                    // Calling `exits.success()` after having done res.write() calls
+                    // earlier (and thus sending headers) is fine-- as long as you
+                    // haven't done something that ended the response yet.
+                    //  We gracefully tolerate it here.
+                    return res.end();
+                  }
+                  else { return res.send(); }
 
                 }//</ outputExample is undefined > -•
 
                 // • Expecting ref:
                 if (outputExample === '===') {
+
+                  if (res.finished) {
+                    // If res.end() has already been called somehow, then this is definitely an error.
+                    // Currently, in this case, we handle this simply by trying to call res.send(),
+                    // deliberately causing the normal "headers were already sent" error.
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                    // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
+                    // a response to this request more than once!  Note that the case of triggering
+                    // more than one exit, or the same exit more than once, is already handled w/ a
+                    // custom error msg elsewhere)
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                    return res.send();
+                  }
+                  else if (res.headersSent) {
+                    // Calling `exits.success()` after having done res.write() calls
+                    // earlier (and thus sending headers) is fine-- as long as you
+                    // haven't done something that ended the response yet.
+                    //  We gracefully tolerate it here.
+                    return res.end();
+                  }
 
                   // If `null`, use res.sendStatus().
                   if (_.isNull(output)) {
