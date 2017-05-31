@@ -21,7 +21,7 @@ var getOutputExample = require('./get-output-example');
  * @throws {Error} If exit/response metadata is invalid or if machine-as-action doesn't know how to handle it
  *         @property {String} code  (===E_INVALID_RES_METADATA_IN_EXIT_DEF)
  */
-module.exports = function normalizeResponses (configuredResponses, exits){
+module.exports = function normalizeResponses(configuredResponses, exits) {
 
   // Note that we extend success and error exits here so that they will always exist
   // when this custom response metadata is being built. This only runs once when initially
@@ -37,7 +37,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
 
 
   // Return normalized exit definitions.
-  return _.reduce(exits, function (memo, exitDef, exitCodeName) {
+  return _.reduce(exits, function(memo, exitDef, exitCodeName) {
 
     // If a response def exists, merge its properties into the exit definition.
     if (configuredResponses[exitCodeName]) {
@@ -71,9 +71,9 @@ module.exports = function normalizeResponses (configuredResponses, exits){
           'E_INVALID_RES_METADATA_IN_EXIT_DEF',
           new Error(util.format('`machine-as-action` doesn\'t know how to handle the response type ("%s") specified for exit "%s".  (Should be either omitted, or specified as a string.)', exitDef.responseType, exitCodeName))
         );
-      }//-•
+      } //-•
 
-    }//>-•
+    } //>-•
 
     // Status code (`statusCode`)
     if (!_.isUndefined(exitDef.statusCode)) {
@@ -87,17 +87,17 @@ module.exports = function normalizeResponses (configuredResponses, exits){
         );
       }
 
-    }//>-•
+    } //>-•
 
     // View path (`viewTemplatePath`)
     if (!_.isUndefined(exitDef.viewTemplatePath)) {
       if (exitDef.viewTemplatePath === '' || !_.isString(exitDef.viewTemplatePath)) {
         throw flaverr(
           'E_INVALID_RES_METADATA_IN_EXIT_DEF',
-          new Error(util.format('`machine-as-action` doesn\'t know how to handle the view template path ("'+exitDef.viewTemplatePath+'") specified as the `viewTemplatePath` for exit "'+exitCodeName+'".  This should be the relative path to a view file from the `views/` directory, minus the extension (`.ejs`).'))
+          new Error(util.format('`machine-as-action` doesn\'t know how to handle the view template path ("' + exitDef.viewTemplatePath + '") specified as the `viewTemplatePath` for exit "' + exitCodeName + '".  This should be the relative path to a view file from the `views/` directory, minus the extension (`.ejs`).'))
         );
       }
-    }//>-•
+    } //>-•
 
 
 
@@ -114,15 +114,13 @@ module.exports = function normalizeResponses (configuredResponses, exits){
 
       if (exitDef.viewTemplatePath) {
         exitDef.responseType = 'view';
-      }
-      else if (exitCodeName === 'error') {
+      } else if (exitCodeName === 'error') {
         exitDef.responseType = 'error';
-      }
-      else {
+      } else {
         exitDef.responseType = ''; // ("" <=> standard)
       }
 
-    }//>-
+    } //>-
 
 
     // Infer appropriate status code:
@@ -155,10 +153,12 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       else {
         exitDef.statusCode = 500;
       }
-    }//>-
+    } //>-
 
     // Look up the output example for this exit.
-    var outputExample = getOutputExample({ exitDef: exitDef });
+    var outputExample = getOutputExample({
+      exitDef: exitDef
+    });
 
     // Ensure response type is compatible with exit definition
     if (exitDef.responseType === 'redirect') {
@@ -166,9 +166,9 @@ module.exports = function normalizeResponses (configuredResponses, exits){
       if (!_.isUndefined(outputExample) && !_.isString(outputExample)) {
         throw flaverr(
           'E_INVALID_RES_METADATA_IN_EXIT_DEF',
-          new Error(util.format('Cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `outputExample` must be a string.  But instead, it is: ', exitCodeName,util.inspect(outputExample, false, null)))
+          new Error(util.format('Cannot configure exit "%s" to redirect.  The redirect URL is based on the return value from the exit, so the exit\'s `outputExample` must be a string.  But instead, it is: ', exitCodeName, util.inspect(outputExample, false, null)))
         );
-      }//-•
+      } //-•
 
       // If no outputExample was specified, modify the exit in-memory to make it a string.
       // This is criticial, otherwise the machine runner will convert the runtime output into an Error instance,
@@ -185,8 +185,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
         // ------------------------------------------------
       }
 
-    }
-    else if (exitDef.responseType === 'view') {
+    } else if (exitDef.responseType === 'view') {
       // Note that we tolerate `===` so that it can be used for performance reasons.
       // If no output example is provided, we treat it like `===`.
       if (!_.isUndefined(outputExample) && outputExample !== '===' && !_.isPlainObject(outputExample)) {
@@ -195,8 +194,7 @@ module.exports = function normalizeResponses (configuredResponses, exits){
           new Error(util.format('Cannot configure exit "%s" to show a view.  The return value from the exit is used as view locals (variables accessible inside the view HTML), so the exit\'s `outputExample` must be some sort of dictionary (`{}`).  But instead, it\'s: ', exitCodeName, util.inspect(outputExample, false, null)))
         );
       }
-    }
-    else if (exitDef.responseType === 'json') {
+    } else if (exitDef.responseType === 'json') {
       // ** NOTE THAT THE `json` RESPONSE TYPE IS DEPRECATED **
       if (!_.isUndefined(outputExample) && _.isUndefined(outputExample)) {
         throw flaverr(
@@ -204,12 +202,12 @@ module.exports = function normalizeResponses (configuredResponses, exits){
           new Error(util.format('Cannot configure exit "%s" to respond with JSON.  The return value from the exit will be encoded as JSON, so something must be returned...but the exit\'s `outputExample` is undefined.', exitCodeName))
         );
       }
-    }//>-•
+    } //>-•
 
     // Log warning if unnecessary stuff is provided (i.e. a `view` was provided along with responseType !== "view")
     if (exitDef.viewTemplatePath && exitDef.responseType !== 'view') {
-      console.error('Warning: unnecessary `viewTemplatePath` (response metadata) provided for an exit which is not configured to respond with a view (actual responseType => "'+exitDef.responseType+'").  To resolve, set `responseType: \'view\'`.');
-    }//>-
+      console.error('Warning: unnecessary `viewTemplatePath` (response metadata) provided for an exit which is not configured to respond with a view (actual responseType => "' + exitDef.responseType + '").  To resolve, set `responseType: \'view\'`.');
+    } //>-
 
     memo[exitCodeName] = exitDef;
     return memo;

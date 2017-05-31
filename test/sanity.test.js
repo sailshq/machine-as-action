@@ -1,8 +1,6 @@
 var util = require('util');
 var assert = require('assert');
-var _ = require('@sailshq/lodash');
 var testRoute = require('./util/test-route.util');
-
 
 
 
@@ -10,15 +8,16 @@ testRoute('sanity check (ridiculously simplistic usage should work)', {
   machine: {
     inputs: {},
     exits: {},
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success();
     }
   },
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   return done();
 });
-
 
 
 
@@ -30,17 +29,18 @@ testRoute('should not JSON-encode top-level strings in output', {
         outputExample: '*'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('hello world');
     }
   },
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   assert.equal(body, 'hello world');
   // ^^ i.e. 'hello world', not '"hello world"'
   return done();
 });
-
 
 
 
@@ -53,22 +53,23 @@ testRoute('should be able to access `env.req` and `env.res`', {
   machine: {
     inputs: {},
     exits: {},
-    fn: function (inputs, exits, env) {
-      if (!env.req||!env.res||env.req.method !== 'POST') {
+    fn: function(inputs, exits, env) {
+      if (!env.req || !env.res || env.req.method !== 'POST') {
         return exits.error();
       }
       env.res.set('x-test', 'itworked');
       return exits.success();
     }
   },
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.headers['x-test'] !== 'itworked') {
     return done(new Error('Machine should have been able to set response header (`x-test`) to "itworked"!'));
   }
   return done();
 });
-
 
 
 
@@ -80,14 +81,16 @@ testRoute('if exit def + compatible output example is specified, actual result s
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('hello world!');
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (body !== 'hello world!') {
-    return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+    return done(new Error('should have gotten "hello world!" as the response body, but instead got: ' + util.inspect(body)));
   }
   return done();
 });
@@ -106,7 +109,7 @@ testRoute('if input def + compatible input examples are specified, parameters sh
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success(inputs.x);
     }
   },
@@ -118,14 +121,15 @@ testRoute('if input def + compatible input examples are specified, parameters sh
       x: 'hello world!'
     }
   },
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (body !== 'hello world!') {
-    return done(new Error('should have gotten "hello world!" as the response body, but instead got: '+util.inspect(body)));
+    return done(new Error('should have gotten "hello world!" as the response body, but instead got: ' + util.inspect(body)));
   }
   return done();
 });
-
 
 
 
@@ -142,7 +146,7 @@ testRoute('ignore extra parameters', {
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success(inputs.y);
     }
   },
@@ -155,18 +159,16 @@ testRoute('ignore extra parameters', {
       y: 'some value for y'
     }
   },
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (body !== 'OK') {
     // NOTE: this is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
-    return done(new Error('should have gotten `OK` as the response body, but instead got: '+util.inspect(body)));
+    return done(new Error('should have gotten `OK` as the response body, but instead got: ' + util.inspect(body)));
   }
   return done();
 });
-
-
-
-
 
 
 
@@ -182,21 +184,19 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
-      if (inputs.x !== undefined) { return exits.error(); }
+    fn: function(inputs, exits) {
+      if (inputs.x !== undefined) {
+        return exits.error();
+      }
       return exits.success();
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   return done();
 });
-
-
-
-
-
-
 
 
 
@@ -313,14 +313,6 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 
 
 
-
-
-
-
-
-
-
-
 testRoute('customizing success exit to use a special status code in the response should work', {
   machine: {
     inputs: {},
@@ -329,7 +321,7 @@ testRoute('customizing success exit to use a special status code in the response
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success();
     }
   },
@@ -339,17 +331,16 @@ testRoute('customizing success exit to use a special status code in the response
       statusCode: 201
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 201) {
-    return done(new Error('Should have responded with a 201 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 201 status code (instead got ' + resp.statusCode + ')'));
   }
   assert.equal(body, 'Created');
   return done();
 });
-
-
-
 
 
 
@@ -361,7 +352,7 @@ testRoute('customizing success exit to do a redirect should work', {
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('http://google.com');
     }
   },
@@ -372,10 +363,12 @@ testRoute('customizing success exit to do a redirect should work', {
       statusCode: 301
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 301) {
-    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 301 status code (instead got ' + resp.statusCode + ')'));
   }
   if (resp.headers.location !== 'http://google.com') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
@@ -393,7 +386,7 @@ testRoute('redirecting should work, even without specifying a status code or out
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('/foo/bar');
     }
   },
@@ -402,18 +395,18 @@ testRoute('redirecting should work, even without specifying a status code or out
       responseType: 'redirect'
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 302) {
-    return done(new Error('Should have responded with a 302 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 302 status code (instead got ' + resp.statusCode + ')'));
   }
   if (resp.headers.location !== '/foo/bar') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
   }
   return done();
 });
-
-
 
 
 
@@ -425,7 +418,7 @@ testRoute('customizing success exit to do JSON should work', {
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('some output value');
     }
   },
@@ -434,17 +427,18 @@ testRoute('customizing success exit to do JSON should work', {
       responseType: ''
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 200) {
-    return done(new Error('Should have responded with a 200 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 200 status code (instead got ' + resp.statusCode + ')'));
   }
   if (body !== 'some output value') {
     return done(new Error('Should have sent the appropriate response body'));
   }
   return done();
 });
-
 
 
 
@@ -457,7 +451,7 @@ testRoute('exits other than success should default to status code 500', {
       },
       whatever: {}
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.whatever('some output value');
     }
   },
@@ -466,18 +460,15 @@ testRoute('exits other than success should default to status code 500', {
       responseType: ''
     }
   }
-}, function (err, resp, body, done){
+}, function(err, resp, body, done) {
   if (err) {
     if (err.status !== 500) {
-      return done(new Error('Should have responded with status code 500 (but instead got status code '+err.status+')'));
+      return done(new Error('Should have responded with status code 500 (but instead got status code ' + err.status + ')'));
     }
     return done();
   }
   return done(new Error('Should have responded with status code 500 (but instead got status code 200)'));
 });
-
-
-
 
 
 
@@ -490,7 +481,7 @@ testRoute('exits other than success can have their status codes overriden too', 
       },
       whatever: {}
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.whatever('some output value');
     }
   },
@@ -503,24 +494,16 @@ testRoute('exits other than success can have their status codes overriden too', 
       statusCode: 204
     }
   }
-}, function (err, resp, body, done){
+}, function(err, resp, body, done) {
   if (err) {
     console.log(err.status);
     return done(err);
   }
   if (resp.statusCode !== 204) {
-    return done(new Error('Should have responded with status code 204 (but instead got status code '+resp.statusCode+')'));
+    return done(new Error('Should have responded with status code 204 (but instead got status code ' + resp.statusCode + ')'));
   }
   return done();
 });
-
-
-
-
-
-
-
-
 
 
 
@@ -533,7 +516,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
       },
       whatever: {}
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.whatever('some output value');
     }
   },
@@ -545,19 +528,15 @@ testRoute('ceteris paribus, overriding status code should change response type i
       statusCode: 204
     }
   }
-}, function (err, resp, body, done){
+}, function(err, resp, body, done) {
   if (err) {
-    return done(new Error('Should have responded with status code 204-- instead got '+err.status));
+    return done(new Error('Should have responded with status code 204-- instead got ' + err.status));
   }
   if (resp.statusCode !== 204) {
-    return done(new Error('Should have responded with status code 204 (but instead got status code '+resp.statusCode+')'));
+    return done(new Error('Should have responded with status code 204 (but instead got status code ' + resp.statusCode + ')'));
   }
   return done();
 });
-
-
-
-
 
 
 
@@ -570,7 +549,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
       },
       whatever: {}
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('some output value');
     }
   },
@@ -580,18 +559,15 @@ testRoute('ceteris paribus, overriding status code should change response type i
     },
     whatever: {}
   }
-}, function (err, resp, body, done){
+}, function(err, resp, body, done) {
   if (err) {
     if (err.status !== 503) {
-      return done(new Error('Should have responded with status code 503-- instead got '+err.status));
+      return done(new Error('Should have responded with status code 503-- instead got ' + err.status));
     }
     return done();
   }
-  return done(new Error('Should have responded with status code 503 (but instead got status code '+resp.statusCode+')'));
+  return done(new Error('Should have responded with status code 503 (but instead got status code ' + resp.statusCode + ')'));
 });
-
-
-
 
 
 
@@ -604,7 +580,7 @@ testRoute('`redirect` with custom status code', {
       },
       whatever: {}
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.success('http://google.com');
     }
   },
@@ -615,18 +591,18 @@ testRoute('`redirect` with custom status code', {
     },
     whatever: {}
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 301) {
-    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 301 status code (instead got ' + resp.statusCode + ')'));
   }
   if (resp.headers.location !== 'http://google.com') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
   }
   return done();
 });
-
-
 
 
 
@@ -641,32 +617,29 @@ testRoute('`redirect` with custom status code', {
         example: 'some string'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.whatever('http://google.com');
     }
   },
   responses: {
-    success: {
-    },
+    success: {},
     whatever: {
       statusCode: 301,
       responseType: 'redirect'
     }
   }
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
   if (resp.statusCode !== 301) {
-    return done(new Error('Should have responded with a 301 status code (instead got '+resp.statusCode+')'));
+    return done(new Error('Should have responded with a 301 status code (instead got ' + resp.statusCode + ')'));
   }
   if (resp.headers.location !== 'http://google.com') {
     return done(new Error('Should have sent the appropriate "Location" response header'));
   }
   return done();
 });
-
-
-
-
 
 
 
@@ -712,9 +685,6 @@ testRoute('`redirect` with custom status code', {
 
 
 
-
-
-
 // var _loggerRanButItShouldntHave;
 // testRoute('should call `logDebugOutputFn` with auto-generated error if no unexpected output is sent', {
 //   logDebugOutputFn: function (unexpectedOutput) {
@@ -743,9 +713,6 @@ testRoute('`redirect` with custom status code', {
 
 
 
-
-
-
 testRoute('should work when lobbed another random sanity check', {
 
   machine: {
@@ -755,21 +722,21 @@ testRoute('should work when lobbed another random sanity check', {
         description: 'Something fake happened.  Because this is fake.'
       }
     },
-    fn: function (inputs, exits) {
+    fn: function(inputs, exits) {
       return exits.notFound(new Error('Could not locate polar bears.  Don\'t panic, but get help as soon as possible.'));
     }
   },
-}, function (err, resp, body, done){
+}, function(err, resp, body, done) {
 
   try {
     assert(err);
     assert.equal(err.status, 500);
-  } catch (e) { return done(e); }
+  } catch (e) {
+    return done(e);
+  }
 
   return done();
 });
-
-
 
 
 
@@ -834,8 +801,6 @@ testRoute('should work when lobbed another random sanity check', {
 
 
 
-
 //
 // Cannot test `files` here w/ `sails.request()`
 //
-

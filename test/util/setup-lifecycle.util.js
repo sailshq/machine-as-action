@@ -9,10 +9,11 @@ var Sails = require('sails').Sails;
  * before and after lifecycle callbacks for mocha
  * @return {SailsApp}
  */
-module.exports = function setupLifecycle (){
+
+module.exports = function setupLifecycle() {
 
   var app = Sails();
-  before(function (done){
+  before(function(done) {
     app.load({
       hooks: {
         grunt: false
@@ -21,16 +22,22 @@ module.exports = function setupLifecycle (){
         level: 'warn'
       },
       globals: false
-    }, function (err){
-      if (err) { return done(err); }
-      else { return done(); }
+    }, function(err) {
+      if (err) {
+        return done(err);
+      } else {
+        return done();
+      }
     });
   });
 
-  after(function (done){
-    app.lower(function (err){
-      if (err) { return done(err); }
-      else { return done(); }
+  after(function(done) {
+    app.lower(function(err) {
+      if (err) {
+        return done(err);
+      } else {
+        return done();
+      }
     });
   });
 
