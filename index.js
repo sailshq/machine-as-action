@@ -3,7 +3,7 @@
  */
 
 var util = require('util');
-var Readable = require('stream').Readable;
+var Stream = require('stream');
 var _ = require('@sailshq/lodash');
 var Streamifier = require('streamifier');
 var rttc = require('rttc');
@@ -500,7 +500,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                       • a ref:
     //                            ...then at runtime, the outgoing value will be sniffed.  If:
     //
-    //                            (A) it is a READABLE STREAM of binary or UTF-8 chunks (i.e. NOT in object mode):
+    //                            (A) it is a (hopefully readable) STREAM of binary or UTF-8 chunks (i.e. NOT in
+    //                                object mode):
     //                                ...then it will be piped back to the requesting client in the response.
     //
     //                            (B) it is a buffer:
@@ -773,12 +774,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     // If res.end() has already been called somehow, then this is definitely an error.
                     // Currently, in this case, we handle this simply by trying to call res.send(),
                     // deliberately causing the normal "headers were already sent" error.
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                     // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
                     // a response to this request more than once!  Note that the case of triggering
                     // more than one exit, or the same exit more than once, is already handled w/ a
                     // custom error msg elsewhere)
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                     return res.send();
                   }
                   else if (res.headersSent) {
@@ -837,8 +838,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     }
                   }//-•
 
-                  // • Readable stream
-                  if (output instanceof Readable) {
+                  // • Stream (hopefully a Readable one)
+                  if (output instanceof Stream) {
                     res.status(responses[exitCodeName].statusCode);
                     return output.pipe(res);
                   }
