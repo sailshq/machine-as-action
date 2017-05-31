@@ -829,8 +829,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     res = res.status(responses[exitCodeName].statusCode);
 
                     if (!_.isFunction(output.toJSON)) {
-                      // No need to JSON stringify (this is already a string).
-                      return res.send(util.inspect(output));
+                      // Don't send the stack trace in the response in production.
+                      if (IS_RUNNING_IN_PRODUCTION) {
+                        return res.sendStatus(responses[exitCodeName].statusCode);
+                      }
+                      else {
+                        // No need to JSON stringify (this is already a string).
+                        return res.send(util.inspect(output));
+                      }
                     }
                     else {
                       return res.json(output);
