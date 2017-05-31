@@ -1,6 +1,4 @@
-var util = require('util');
 var assert = require('assert');
-var _ = require('@sailshq/lodash');
 var testRoute = require('./util/test-route.util');
 
 
@@ -41,19 +39,23 @@ testRoute('with urlWildcardSuffix option', {
   },
 
 
-  fn: function (inputs, exits) {
+  fn: function(inputs, exits) {
     return exits.success(inputs.star);
   }
 
 
-}, function (err, resp, body, done){
-  if (err) { return done(err); }
+}, function(err, resp, body, done) {
+  if (err) {
+    return done(err);
+  }
 
   try {
 
     assert.equal(body, 'foo/bar');
 
-  } catch (e) { return done(e); }
+  } catch (e) {
+    return done(e);
+  }
 
   return done();
 

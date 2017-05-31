@@ -680,8 +680,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 // If NOT running in production, then provide additional details and tips.
                 if (!IS_RUNNING_IN_PRODUCTION) {
                   jsonReadyErrDictionary.message = preamble+'  '+
-                  '**This message and the following additional information will not '+
-                  'be shown in production**:  '+
+                  '**The following additional tip will not be shown in production**:  '+
                   'Tip: Check your client-side code to make sure that the request data it '+
                   'sends matches the expectations of the corresponding parameters in your '+
                   'server-side route/action.  Also check that your client-side code sends '+
@@ -830,8 +829,14 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                     res = res.status(responses[exitCodeName].statusCode);
 
                     if (!_.isFunction(output.toJSON)) {
-                      // No need to JSON stringify (this is already a string).
-                      return res.send(util.inspect(output));
+                      // Don't send the stack trace in the response in production.
+                      if (IS_RUNNING_IN_PRODUCTION) {
+                        return res.sendStatus(responses[exitCodeName].statusCode);
+                      }
+                      else {
+                        // No need to JSON stringify (this is already a string).
+                        return res.send(util.inspect(output));
+                      }
                     }
                     else {
                       return res.json(output);
@@ -1025,8 +1030,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             }
 
             // Don't send the error in the response in production.
-            if (process.env.NODE_ENV ==='production') {
-              return res.status(500).send();
+            if (IS_RUNNING_IN_PRODUCTION) {
+              return res.sendStatus(500);
             }
             // Otherwise, send the error message in the response.
             else {
