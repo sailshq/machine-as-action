@@ -3,7 +3,9 @@
   "version": "9.0.1",
   "description": "Run a machine from an HTTP or WebSocket request.",
   "scripts": {
-    "test": "node ./node_modules/mocha/bin/mocha -t 8000"
+    "test": "npm run lint && npm run custom-tests && echo 'Done.'",
+    "lint": "node ./node_modules/eslint/bin/eslint . --max-warnings=0 && echo '✔  Your code looks good.'",
+    "custom-tests": "echo \"Running tests...\" && echo && node ./node_modules/mocha/bin/mocha -t 8000 && echo"
   },
   "keywords": [
     "machine",
@@ -26,6 +28,7 @@
     "streamifier": "0.1.1"
   },
   "devDependencies": {
+    "eslint": "3.19.0",
     "mocha": "2.5.3",
     "sails": "^1.0.0-0"
   },
