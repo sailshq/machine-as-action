@@ -1025,7 +1025,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
             // Don't send the error in the response in production.
             if (IS_RUNNING_IN_PRODUCTION) {
-              return res.status(500).send();
+              return res.sendStatus(500);
             }
             // Otherwise, send the error message in the response.
             else {
