@@ -198,14 +198,13 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       // (depending on the exit's responseType, of course.)
       else {
 
+        // Set a header to as a debug flag indicating this is just a stub.
+        env.res.set('X-Stub', machineDef.identity);
+
         // But if you're in production, since this would respond with
         // a stub (i.e. fake data) then log a warning about this happening.
         // (since you probably don't actually want this to happen)
         if (IS_RUNNING_IN_PRODUCTION) {
-
-          // Set a header to as a debug flag indicating this is just a stub.
-          env.res.set('X-Stub', machineDef.identity);
-
           console.warn('Using stub implementation for action (`'+machineDef.identity+'`) because it has no `fn`!\n'+
           'That means the output sent from this action will be completely fake!  To do this, using the `outputExample` '+
           'from the success exit and using that as output.\n'+
