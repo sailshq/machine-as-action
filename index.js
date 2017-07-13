@@ -254,7 +254,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // request. (e.g. non-dyamic things like status code, response type, view name, etc)
   var responses;
   try {
-    responses = normalizeResponses(options.responses || {}, wetMachine.exits);
+    responses = normalizeResponses(options.responses || {}, wetMachine.getDef().exits);
   } catch (e) {
     switch (e.code) {
       case 'E_INVALID_RES_METADATA_IN_EXIT_DEF':
@@ -263,7 +263,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       default: throw e;
     }
   }//</catch>
-  wetMachine.exits = responses;
+  wetMachine.getDef().exits = responses;
   // Be warned that this caching is **destructive**.  In other words, if a dictionary was provided
   // for `options.responses`, it will be irreversibly modified.  Also the exits in the
   // machine definition will be irreversibly modified.
@@ -289,7 +289,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // Set up a local variable that will be used to hold the "live machine"
     // (which is a lot like a configured part or machine instruction)
-    var liveMachine;
+    var deferred;
 
 
     // Validate `req` and `res`
@@ -352,7 +352,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
     // Build `argins` (aka input configurations), a dictionary that maps each input's codeName to the
     // appropriate argument.
-    var argins = _.reduce(wetMachine.inputs, function (memo, inputDef, inputCodeName) {
+    var argins = _.reduce(wetMachine.getDef().inputs, function (memo, inputDef, inputCodeName) {
 
       // If this input is called out by the `urlWildcardSuffix`, then we understand it as "*" from the
       // URL pattern.  This is indicating it's special; that it represents a special, agressive kind of match
@@ -400,7 +400,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
     // Pass argins to the machine.
-    liveMachine = wetMachine.configure(argins);
+    deferred = wetMachine(argins);
 
 
     // Build and set `env`
@@ -417,8 +417,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       env.sails = req._sails;
     }
 
-    // Expose `env` in machine `fn`.
-    liveMachine.setEnv(env);
+    // Set context for machine `fn`.
+    deferred.meta(env);
 
 
 
@@ -563,7 +563,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     var exitAttempts = [];
 
     var callbacks = {};
-    _.each(_.keys(wetMachine.exits), function builtExitCallback(exitCodeName){
+    _.each(_.keys(wetMachine.getDef().exits), function builtExitCallback(exitCodeName){
 
       // Build a callback for this exit that sends the appropriate response.
       callbacks[exitCodeName] = function respondApropos(output){
@@ -641,10 +641,11 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // that this is a runtime validation error _from this specific machine_ (and
             // not from any machines it might call internally in its `fn`), then send back
             // send back a 400 (using the built-in `badRequest()` response, if it exists.)
-            var isValidationError =
-              exitCodeName === 'error' &&
-              output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
-              output.machineInstance === liveMachine;
+            var isValidationError = false;// TODO: solve this
+            // var isValidationError =
+            //   exitCodeName === 'error' &&
+            //   output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
+            //   output.machineInstance === liveMachine;
 
             if (isValidationError) {
               // Sanity check:
@@ -719,7 +720,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               case '': (function(){
 
                 // • Undefined output example:  We take that to mean void...mostly (see below.)
-                var outputExample = getOutputExample({ machineDef: wetMachine, exitCodeName: exitCodeName });
+                var outputExample = getOutputExample({ machineDef: wetMachine.getDef(), exitCodeName: exitCodeName });
                 if (_.isUndefined(outputExample)) {
 
                   // Expose a more specific varname for clarity.
@@ -816,7 +817,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   }
 
                   // If `null`, use res.sendStatus().
-                  if (_.isNull(output)) {
+                  if (_.isUndefined(output) || _.isNull(output)) {
                     return res.sendStatus(responses[exitCodeName].statusCode);
                   }
                   // If the output is an Error instance and it doesn't have a custom .toJSON(),
@@ -1045,7 +1046,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     });//</each exit>
 
     // Then attach them and `.exec()` the machine.
-    return liveMachine.exec(callbacks);
+    return deferred.switch(callbacks);
 
   };//</define action>
 

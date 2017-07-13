@@ -10,6 +10,7 @@
   "keywords": [
     "machine",
     "action",
+    "actions2",
     "controller",
     "sails.js",
     "sails",
@@ -21,15 +22,15 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "flaverr": "^1.0.0",
+    "flaverr": "^1.2.2",
     "@sailshq/lodash": "^3.10.2",
-    "machine": "^14.0.0",
-    "rttc": "^9.7.0",
+    "machine": "^15.0.0-2",
+    "rttc": "^10.0.0-1",
     "streamifier": "0.1.1"
   },
   "devDependencies": {
-    "eslint": "3.19.0",
-    "mocha": "2.5.3",
+    "eslint": "3.5.0",
+    "mocha": "3.0.2",
     "sails": "^1.0.0-0"
   },
   "repository": {
