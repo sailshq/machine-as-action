@@ -1,7 +1,7 @@
 var util = require('util');
 var assert = require('assert');
+var _ = require('@sailshq/lodash');
 var testRoute = require('./util/test-route.util');
-
 
 
 testRoute('sanity check (ridiculously simplistic usage should work)', {
@@ -143,7 +143,7 @@ testRoute('ignore extra parameters', {
     },
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -163,10 +163,27 @@ testRoute('ignore extra parameters', {
   if (err) {
     return done(err);
   }
-  if (body !== 'OK') {
-    // NOTE: this is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
-    return done(new Error('should have gotten `OK` as the response body, but instead got: ' + util.inspect(body)));
+
+  // NOTE: In the past, we'd assume that the `undefined` passed in to exits.success() inside of `fn` would have
+  // automatically been coerced into empty string ('').  Then, here, we'd actually expect it never to have been
+  // treated that way (and instead just have been left as undefined, from the perspective of our request client).
+  // This is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
+  // Otherwise, we'd have expected to get empty string ('') here instead.
+  // Here's that approach:
+  // ```
+  // if (body !== 'OK') {
+  //   return done(new Error('should have gotten `OK` as the response body, but instead got: ' + util.inspect(body)));
+  // }
+  // ```
+  //
+  // BUT!  As it turns out, in machine@v15, automatic coercion is no longer enabled out of the box.
+  // So instead, we check for the other reality:  Since `undefined` will have been left as-is, it ends
+  // up making its way to the Sails VRI/`sails.request()` logic, at which point it gets converted to
+  // `null`.  So then here, we check for that explicitly:
+  if (!_.isNull(body)) {
+    return done(new Error('should have gotten `null` as the response body, but instead got: ' + util.inspect(body)));
   }
+
   return done();
 });
 
