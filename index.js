@@ -605,30 +605,30 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               if (doSendDevHeaders) {
                 var responseInfo = responses[exitCodeName];
                 if (responseInfo.friendlyName) {
-                  res.set('X-Exit-Friendly-Name', responseInfo.friendlyName.replace(/\n+/g, ' '));
+                  res.set('X-Exit-Friendly-Name', responseInfo.friendlyName.replace(/\s*\n+\s*/g, ' '));
                 }
                 if (responseInfo.description) {
-                  res.set('X-Exit-Description', responseInfo.description.replace(/\n+/g, ' '));
+                  res.set('X-Exit-Description', responseInfo.description.replace(/\s*\n+\s*/g, ' '));
                 }
                 if (responseInfo.extendedDescription) {
-                  res.set('X-Exit-Extended-Description', responseInfo.extendedDescription.replace(/\n+/g, ' '));
+                  res.set('X-Exit-Extended-Description', responseInfo.extendedDescription.replace(/\s*\n+\s*/g, ' '));
                 }
                 if (responseInfo.moreInfoUrl) {
-                  res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl.replace(/\n+/g, ' '));
+                  res.set('X-Exit-More-Info-Url', responseInfo.moreInfoUrl.replace(/\s*\n+\s*/g, ' '));
                 }
                 // Only include output headers if there _is_ output and
                 // this is a standard response:
                 if (responseInfo.responseType === '' && !_.isUndefined(output)) {
                   if (responseInfo.outputFriendlyName) {
-                    res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName.replace(/\n+/g, ' '));
+                    res.set('X-Exit-Output-Friendly-Name', responseInfo.outputFriendlyName.replace(/\s*\n+\s*/g, ' '));
                   }
                   if (responseInfo.outputDescription) {
-                    res.set('X-Exit-Output-Description', responseInfo.outputDescription.replace(/\n+/g, ' '));
+                    res.set('X-Exit-Output-Description', responseInfo.outputDescription.replace(/\s*\n+\s*/g, ' '));
                   }
                 }
                 // Otherwise if this is a view response, include the view path.
                 else if (responseInfo.responseType === 'view') {
-                  res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath.replace(/\n+/g, ' '));
+                  res.set('X-Exit-View-Template-Path', responseInfo.viewTemplatePath.replace(/\s*\n+\s*/g, ' '));
                 }
               }//</if running in a non-production environment without development headers explicitly disabled>
               // >-
