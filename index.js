@@ -370,6 +370,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         memo[inputCodeName] = req.param(inputCodeName);
       }
 
+      // If a querystring-encoded parameter comes in as "" (empty string) for an input expecting a boolean value,
+      // interpreted that special case as `true`.
+      if (inputDef.type === 'boolean' && req.query && req.query[inputCodeName] === '') {
+        memo[inputCodeName] = true;
+      }
+
       return memo;
     }, {});
 
@@ -1044,7 +1050,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       };//</respondApropos>
     });//</each exit>
 
-    // Then attach them and `.exec()` the machine.
+    // Then attach them and execute the machine.
     return deferred.switch(callbacks);
 
   };//</define action>
