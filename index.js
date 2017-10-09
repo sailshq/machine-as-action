@@ -255,7 +255,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // This gives us access to the instantiated inputs and exits.
   var wetMachine = Machine.buildWithCustomUsage({
     def: machineDef,
-    resultValidationTactic: 'coerceAndCloneOrError'
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    // FUTURE: make this configurable (+ other custom opts maybe):
+    // ```
+    // resultValidationTactic: 'coerceAndCloneOrError'
+    // ```
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   });
 
   // If any static response customizations/metadata were specified via `optsOrMachineDef`, combine
