@@ -177,7 +177,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // If no `fn` was provided, dynamically build a stub fn that always responds with `success`,
   // using the `example` as output data, if one was specified.
   if (!machineDef.fn) {
-    machineDef.fn = function (inputs, exits, env) {
+    machineDef.fn = function (inputs, exits) {
 
       // This is a generated `fn`.
       // (Note that this is fine for production in some cases-- e.g. static views.)
@@ -199,7 +199,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
       else {
 
         // Set a header to as a debug flag indicating this is just a stub.
-        env.res.set('X-Stub', machineDef.identity);
+        this.res.set('X-Stub', machineDef.identity);
 
         // But if you're in production, since this would respond with
         // a stub (i.e. fake data) then log a warning about this happening.
@@ -402,22 +402,22 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     deferred = wetMachine(argins);
 
 
-    // Build and set `env`
+    // Build and set metadata (aka "context" aka "habitat vars")
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
-    // Provide `env.req` and `env.res`
-    var env = {
+    // Provide `this.req` and `this.res`
+    var _meta = {
       req: req,
       res: res
     };
 
-    // If this is a Sails app, provide `env.sails` for convenience.
+    // If this is a Sails app, provide `this.sails` for convenience.
     if (req._sails) {
-      env.sails = req._sails;
+      _meta.sails = req._sails;
     }
 
     // Set context for machine `fn`.
-    deferred.meta(env);
+    deferred.meta(_meta);
 
 
 
@@ -438,7 +438,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                     - Useful for sending raw data in a format like CSV or XML.
     //  /\                 - The *STRING* output from the machine exit will be sent verbatim as the
     //  || prbly wont be    response body. Custom response headers like "Content-Type" can be sent
-    //  || implemented      using `env.res.set()` or mp-headers.  For more info, see "FILE" below.
+    //  || implemented      using `this.res.set()` or mp-headers.  For more info, see "FILE" below.
     //  since you can just - If the exit does not guarantee a *STRING* output, then `machine-as-action`
     //  use "" to            will refuse to rig this machine.
     //  achieve the same
@@ -463,8 +463,8 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                       transmit data as JSON, or send no response body at all.
     //                     - Note that any response headers you might want to use such as `content-type`
     //                       and `content-disposition` should be set in the implementation of your
-    //                       machine using `env.res.set()`.
-    //                     - For advanced documentation on `env.res.set()`, check out Sails docs:
+    //                       machine using `this.res.set()`.
+    //                     - For advanced documentation on `this.res.set()`, check out Sails docs:
     //                         [Docs](http://sailsjs.org/documentation/reference/response-res/res-set)
     //                     - Or if you're looking for something higher-level:
     //                         [Install](http://node-machine.org/machinepack-headers/set-response-header)
@@ -509,7 +509,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
     //                            -------------------------------------------------------------------------------------
     //                            ^ IT IS IMPORTANT TO POINT OUT THAT, WHEN PIPING EITHER BUFFERS OR STREAMS, THE
     //                              CONTENT-TYPE IS SET TO OCTET STREAM UNLESS IT HAS ALREADY BEEN EXPLICITLY SPECIFIED
-    //                              USING `env.res.set()` (in which case it is left alone).
+    //                              USING `this.res.set()` (in which case it is left alone).
     //                            -------------------------------------------------------------------------------------
     //                       ----- Note about responding w/ plain text: ------------------------------------------------------
     //                       If you need to respond with programatically-generated plain text, and you don't want it
@@ -642,6 +642,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // send back a 400 (using the built-in `badRequest()` response, if it exists.)
             var isValidationError = (
               exitCodeName === 'error' &&
+              output.name === 'UsageError' &&
               output.code === 'E_INVALID_ARGINS'
             );
 
