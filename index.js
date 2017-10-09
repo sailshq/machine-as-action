@@ -643,26 +643,26 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             var isValidationError = false;// TODO: solve this
             // var isValidationError =
             //   exitCodeName === 'error' &&
-            //   output.code === 'E_MACHINE_RUNTIME_VALIDATION' &&
+            //   output.code === 'E_INVALID_ARGINS' &&
             //   output.machineInstance === liveMachine;
 
             if (isValidationError) {
               // Sanity check:
-              if (!_.isArray(output.errors)) { throw new Error('Consistency violation: E_MACHINE_RUNTIME_VALIDATION errors should _always_ have an `errors` array.'); }
+              if (!_.isArray(output.problems)) { throw new Error('Consistency violation: E_INVALID_ARGINS errors should _always_ have a `problems` array.'); }
 
               // Build a new error w/ more specific verbiage.
               // (stack trace is more useful starting from here anyway)
-              var prettyPrintedValidationErrorsStr = _.map(output.errors, function (rttcValidationErr){
-                return '  • '+rttcValidationErr.message;
+              var prettyPrintedValidationErrorsStr = _.map(output.problems, function (problem){
+                return '  • '+problem;
               }).join('\n');
               var baseValidationErrMsg =
               'Received incoming request (`'+req.method+' '+req.path+'`), '+
               'but could not run action (`'+machineDef.identity+'`) '+
-              'due to '+output.errors.length+' missing or invalid '+
-              'parameter'+(output.errors.length>1?'s':'');
+              'due to '+output.problems.length+' missing or invalid '+
+              'parameter'+(output.problems.length>1?'s':'');
               var err = new Error(baseValidationErrMsg+':\n'+prettyPrintedValidationErrorsStr);
               err.code = 'E_MISSING_OR_INVALID_PARAMS';
-              err.errors = output.errors;
+              err.problems = output.problems;
 
               // Attach a toJSON function to the error.  This will be run automatically
               // when this error is being stringified.  This is our chance to make this
@@ -670,12 +670,12 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               err.toJSON = function (){
                 // Include the error code and the array of RTTC validation errors
                 // for easy programmatic parsing.
-                var jsonReadyErrDictionary = _.pick(err, ['code', 'errors']);
+                var jsonReadyErrDictionary = _.pick(err, ['code', 'problems']);
                 // And also include a more front-end-friendly version of the error message.
                 var preamble =
                 'The server could not fulfill this request (`'+req.method+' '+req.path+'`) '+
-                'due to '+output.errors.length+' missing or invalid '+
-                'parameter'+(output.errors.length>1?'s':'')+'.';
+                'due to '+output.problems.length+' missing or invalid '+
+                'parameter'+(output.problems.length>1?'s':'')+'.';
 
                 // If NOT running in production, then provide additional details and tips.
                 if (!IS_RUNNING_IN_PRODUCTION) {
@@ -685,7 +685,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                   'sends matches the expectations of the corresponding parameters in your '+
                   'server-side route/action.  Also check that your client-side code sends '+
                   'data for every required parameter.  Finally, for programmatically-parseable '+
-                  'details about each validation error, `.errors`. ';
+                  'details about each validation error, `.problems`. ';
                 }
                 // If running in production, use a message that is more terse.
                 else {
@@ -707,7 +707,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
                 return res.status(400).json(err);
               }
 
-            }//</if :: machine runtime validation error (E_MACHINE_RUNTIME_VALIDATION)>
+            }//</if :: machine runtime validation error (E_INVALID_ARGINS)>
 
 
             // -•
