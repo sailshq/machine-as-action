@@ -640,11 +640,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
             // that this is a runtime validation error _from this specific machine_ (and
             // not from any machines it might call internally in its `fn`), then send back
             // send back a 400 (using the built-in `badRequest()` response, if it exists.)
-            var isValidationError = false;// TODO: solve this
-            // var isValidationError =
-            //   exitCodeName === 'error' &&
-            //   output.code === 'E_INVALID_ARGINS' &&
-            //   output.machineInstance === liveMachine;
+            var isValidationError = (
+              exitCodeName === 'error' &&
+              output.code === 'E_INVALID_ARGINS'
+            );
 
             if (isValidationError) {
               // Sanity check:
