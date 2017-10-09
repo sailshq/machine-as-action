@@ -221,23 +221,31 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
 
   // Mutate the machine definition.
-  // (In the current version of machine-as-action, as a way of minimizing complexity, we treat void exits
-  // as if they are `outputExample: '==='`.  But to do this, we have to change the def beforehand.)
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-  // FUTURE: Make this behavior configurable.
-  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
   // Ensure the machine def has "success" and "error" exits.
   machineDef.exits = machineDef.exits || {};
   _.defaults(machineDef.exits, {
     error: { description: 'An unexpected error occurred.' },
     success: { description: 'Done.' }
   });
-  _.each(_.keys(machineDef.exits), function(exitCodeName) {
-    var exitDef = machineDef.exits[exitCodeName];
-    if (undefined === exitDef.outputExample && undefined === exitDef.outputType && undefined === exitDef.like && undefined === exitDef.itemOf && undefined === exitDef.getExample) {
-      exitDef.outputExample = '===';
-    }
-  });
+
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  // See `FUTURE` note below, as well as:
+  // https://github.com/sailshq/machine-as-action/commit/b30e5b8cb1cc0522ca1fa1487896bcd3b83600c0
+  //
+  // This was removed to allow for new types of result validation to work properly.
+  // (primarily useful for debugging why things aren't working)
+  // ```
+  // (In the current version of machine-as-action, as a way of minimizing complexity, we treat void exits
+  // as if they are `outputExample: '==='`.  But to do this, we have to change the def beforehand.)
+  //
+  // _.each(_.keys(machineDef.exits), function(exitCodeName) {
+  //   var exitDef = machineDef.exits[exitCodeName];
+  //   if (undefined === exitDef.outputExample && undefined === exitDef.outputType && undefined === exitDef.like && undefined === exitDef.itemOf && undefined === exitDef.getExample) {
+  //     exitDef.outputExample = '===';
+  //   }
+  // });
+  // ```
+  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 
 
@@ -245,7 +253,10 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   // (This is just like a not-yet-configured "part" or "machine instruction".)
   //
   // This gives us access to the instantiated inputs and exits.
-  var wetMachine = Machine.build(machineDef);
+  var wetMachine = Machine.buildWithCustomUsage({
+    def: machineDef,
+    resultValidationTactic: 'coerceAndCloneOrError'
+  });
 
   // If any static response customizations/metadata were specified via `optsOrMachineDef`, combine
   // them with the exit definitions of the machine to build a normalized response mapping that will
@@ -724,143 +735,153 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝ ╩ ╩ ╩╝╚╝═╩╝╩ ╩╩╚══╩╝
               case '': (function(){
 
-                // • Undefined output example:  We take that to mean void...mostly (see below.)
                 var outputExample = getOutputExample({ machineDef: wetMachine.getDef(), exitCodeName: exitCodeName });
-                if (_.isUndefined(outputExample)) {
 
-                  // Expose a more specific varname for clarity.
-                  var unexpectedOutput = output;
+                // • Undefined output example:  We take that to mean void...mostly (see below.)
+                // (But currently, we just treat it the same as if it is outputExample: '===')
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                // FUTURE: bring this back, but behind a flag:
+                // (see https://github.com/sailshq/machine-as-action/pull/12/commits/adeae40aac1daa448401f40113a625c3f1980200 for more context)
+                //
+                // ```
+                // var willNotTolerateOutput = false || _.isUndefined(outputExample);
+                // if (willNotTolerateOutput) {
 
-                  // Technically the machine `fn` could still send through data.
-                  // No matter what, we NEVER send that runtime data to the response.
-                  //
-                  // BUT we still log that data to the console using `sails.log.warn()` if available
-                  // (otherwise `console.warn()`).  We use an overridable log function to do this.
-                  if (!_.isUndefined(unexpectedOutput)) {
+                //   // Expose a more specific varname for clarity.
+                //   var unexpectedOutput = output;
 
-                    try {
-                      // If provided, use custom implementation.
-                      if (!_.isUndefined(options.logDebugOutputFn)) {
-                        options.logDebugOutputFn(unexpectedOutput);
-                      }
-                      // Otherwise, use the default implementation:
-                      else {
-                        var logMsg = 'Received incoming request (`'+req.method+' '+req.path+'`) '+
-                                     'and ran action (`'+machineDef.identity+'`), which exited with '+
-                                     'its `'+exitCodeName+'` response and the following data:\n'+
-                                     util.inspect(unexpectedOutput, {depth: null})+
-                                     '\n'+
-                                     '(^^ this data was not sent in the response)';
+                //   // Technically the machine `fn` could still send through data.
+                //   // No matter what, we NEVER send that runtime data to the response.
+                //   //
+                //   // BUT we still log that data to the console using `sails.log.warn()` if available
+                //   // (otherwise `console.warn()`).  We use an overridable log function to do this.
+                //   if (!_.isUndefined(unexpectedOutput)) {
 
-                        // Only log unexpected output in development.
-                        if (!IS_RUNNING_IN_PRODUCTION) {
+                //     try {
+                //       // If provided, use custom implementation.
+                //       if (!_.isUndefined(options.logDebugOutputFn)) {
+                //         options.logDebugOutputFn(unexpectedOutput);
+                //       }
+                //       // Otherwise, use the default implementation:
+                //       else {
+                //         var logMsg = 'Received incoming request (`'+req.method+' '+req.path+'`) '+
+                //                      'and ran action (`'+machineDef.identity+'`), which exited with '+
+                //                      'its `'+exitCodeName+'` response and the following data:\n'+
+                //                      util.inspect(unexpectedOutput, {depth: null})+
+                //                      '\n'+
+                //                      '(^^ this data was not sent in the response)';
 
-                          if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
-                            req._sails.log.debug(logMsg);
-                          }
-                          else {
-                            console.warn(logMsg);
-                          }
+                //         // Only log unexpected output in development.
+                //         if (!IS_RUNNING_IN_PRODUCTION) {
 
-                        }//</if we're in development mode, log unexpected output>
+                //           if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.debug)) {
+                //             req._sails.log.debug(logMsg);
+                //           }
+                //           else {
+                //             console.warn(logMsg);
+                //           }
 
-                      }//</default implementation to handle logging unexpected output>
-                    } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
-                  }//</if there is unexpected output sent through callback within `fn` at runtime>
+                //         }//</if we're in development mode, log unexpected output>
 
-                  // >-
-                  // Regardless of whether there's unexpected output or not...
+                //       }//</default implementation to handle logging unexpected output>
+                //     } catch (e) { console.warn('The configured log function for unexpected output (`logDebugOutputFn`) threw an error.  Proceeding to send response anyway...  Error details:',e); }
+                //   }//</if there is unexpected output sent through callback within `fn` at runtime>
+
+                //   // >-
+                //   // Regardless of whether there's unexpected output or not...
+
+                //   // Set the status code.
+                //   res = res.status(responses[exitCodeName].statusCode);
+
+                //   // And send the response.
+                //   if (res.finished) {
+                //     // If res.end() has already been called somehow, then this is definitely an error.
+                //     // Currently, in this case, we handle this simply by trying to call res.send(),
+                //     // deliberately causing the normal "headers were already sent" error.
+                //     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                //     // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
+                //     // a response to this request more than once!  Note that the case of triggering
+                //     // more than one exit, or the same exit more than once, is already handled w/ a
+                //     // custom error msg elsewhere)
+                //     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                //     return res.send();
+                //   }
+                //   else if (res.headersSent) {
+                //     // Calling `exits.success()` after having done res.write() calls
+                //     // earlier (and thus sending headers) is fine-- as long as you
+                //     // haven't done something that ended the response yet.
+                //     //  We gracefully tolerate it here.
+                //     return res.end();
+                //   }
+                //   else { return res.send(); }
+
+                // }//</ outputExample is undefined > -•
+
+                // ```
+                // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+                // • Expecting ref:  (+ currently also if exit was left with no output declaration at all)
+
+
+                if (res.finished) {
+                  // If res.end() has already been called somehow, then this is definitely an error.
+                  // Currently, in this case, we handle this simply by trying to call res.send(),
+                  // deliberately causing the normal "headers were already sent" error.
+                  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
+                  // a response to this request more than once!  Note that the case of triggering
+                  // more than one exit, or the same exit more than once, is already handled w/ a
+                  // custom error msg elsewhere)
+                  // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  return res.send();
+                }
+                else if (res.headersSent) {
+                  // Calling `exits.success()` after having done res.write() calls
+                  // earlier (and thus sending headers) is fine-- as long as you
+                  // haven't done something that ended the response yet.
+                  //  We gracefully tolerate it here.
+                  return res.end();
+                }
+
+                // If `null`, use res.sendStatus().
+                if (_.isUndefined(output) || _.isNull(output)) {
+                  return res.sendStatus(responses[exitCodeName].statusCode);
+                }
+                // If the output is an Error instance and it doesn't have a custom .toJSON(),
+                // then util.inspect() it instead (otherwise res.json() will turn it into an empty dictionary).
+                // Note that we don't use the `stack`, since `res.badRequest()` might be used in production,
+                // and we wouldn't want to inadvertently dump a stack trace.
+                if (_.isError(output)) {
 
                   // Set the status code.
                   res = res.status(responses[exitCodeName].statusCode);
 
-                  // And send the response.
-                  if (res.finished) {
-                    // If res.end() has already been called somehow, then this is definitely an error.
-                    // Currently, in this case, we handle this simply by trying to call res.send(),
-                    // deliberately causing the normal "headers were already sent" error.
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
-                    // a response to this request more than once!  Note that the case of triggering
-                    // more than one exit, or the same exit more than once, is already handled w/ a
-                    // custom error msg elsewhere)
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    return res.send();
-                  }
-                  else if (res.headersSent) {
-                    // Calling `exits.success()` after having done res.write() calls
-                    // earlier (and thus sending headers) is fine-- as long as you
-                    // haven't done something that ended the response yet.
-                    //  We gracefully tolerate it here.
-                    return res.end();
-                  }
-                  else { return res.send(); }
-
-                }//</ outputExample is undefined > -•
-
-                // • Expecting ref:
-                if (outputExample === '===') {
-
-                  if (res.finished) {
-                    // If res.end() has already been called somehow, then this is definitely an error.
-                    // Currently, in this case, we handle this simply by trying to call res.send(),
-                    // deliberately causing the normal "headers were already sent" error.
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    // FUTURE: use a better, custom error here  (e.g. you seem to be trying to send
-                    // a response to this request more than once!  Note that the case of triggering
-                    // more than one exit, or the same exit more than once, is already handled w/ a
-                    // custom error msg elsewhere)
-                    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                    return res.send();
-                  }
-                  else if (res.headersSent) {
-                    // Calling `exits.success()` after having done res.write() calls
-                    // earlier (and thus sending headers) is fine-- as long as you
-                    // haven't done something that ended the response yet.
-                    //  We gracefully tolerate it here.
-                    return res.end();
-                  }
-
-                  // If `null`, use res.sendStatus().
-                  if (_.isUndefined(output) || _.isNull(output)) {
-                    return res.sendStatus(responses[exitCodeName].statusCode);
-                  }
-                  // If the output is an Error instance and it doesn't have a custom .toJSON(),
-                  // then util.inspect() it instead (otherwise res.json() will turn it into an empty dictionary).
-                  // Note that we don't use the `stack`, since `res.badRequest()` might be used in production,
-                  // and we wouldn't want to inadvertently dump a stack trace.
-                  if (_.isError(output)) {
-
-                    // Set the status code.
-                    res = res.status(responses[exitCodeName].statusCode);
-
-                    if (!_.isFunction(output.toJSON)) {
-                      // Don't send the stack trace in the response in production.
-                      if (IS_RUNNING_IN_PRODUCTION) {
-                        return res.sendStatus(responses[exitCodeName].statusCode);
-                      }
-                      else {
-                        // No need to JSON stringify (this is already a string).
-                        return res.send(util.inspect(output));
-                      }
+                  if (!_.isFunction(output.toJSON)) {
+                    // Don't send the stack trace in the response in production.
+                    if (IS_RUNNING_IN_PRODUCTION) {
+                      return res.sendStatus(responses[exitCodeName].statusCode);
                     }
                     else {
-                      return res.json(output);
+                      // No need to JSON stringify (this is already a string).
+                      return res.send(util.inspect(output));
                     }
-                  }//-•
+                  }
+                  else {
+                    return res.json(output);
+                  }
+                }//-•
 
-                  // • Stream (hopefully a Readable one)
-                  if (output instanceof Stream) {
-                    res.status(responses[exitCodeName].statusCode);
-                    return output.pipe(res);
-                  }
-                  // • Buffer
-                  else if (output instanceof Buffer) {
-                    res.status(responses[exitCodeName].statusCode);
-                    return Streamifier.createReadStream(output).pipe(res);
-                  }
-                  // • else just continue on to our `res.send()` catch-all below
-                }//>-•
+                // • Stream (hopefully a Readable one)
+                if (output instanceof Stream) {
+                  res.status(responses[exitCodeName].statusCode);
+                  return output.pipe(res);
+                }
+                // • Buffer
+                else if (output instanceof Buffer) {
+                  res.status(responses[exitCodeName].statusCode);
+                  return Streamifier.createReadStream(output).pipe(res);
+                }
+                // - else just continue on to our `res.send()` catch-all below
 
 
                 // • Actual output is number:
