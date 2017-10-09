@@ -3,6 +3,7 @@
  */
 
 var _ = require('@sailshq/lodash');
+var rttc = require('rttc');
 
 
 /**
@@ -66,8 +67,8 @@ module.exports = function getOutputExample(options) {
     throw new Error('Consistency violation: The specified exit (`' + options.exitCodeName + '`) cannot be used in machine-as-action (`like`, `itemOf`, and `getExample` are not currently supported).');
   } else if (!_.isUndefined(exitDef.outputExample)) {
     return exitDef.outputExample;
-  } else if (!_.isUndefined(exitDef.example)) {
-    return exitDef.example;
+  } else if (!_.isUndefined(exitDef.outputType)) {
+    return rttc.getDefaultExemplar(exitDef.outputType);
   } else {
     return undefined;
   }

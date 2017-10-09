@@ -234,7 +234,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
   });
   _.each(_.keys(machineDef.exits), function(exitCodeName) {
     var exitDef = machineDef.exits[exitCodeName];
-    if (_.isUndefined(exitDef.outputExample)) {
+    if (undefined === exitDef.outputExample && undefined === exitDef.outputType && undefined === exitDef.like && undefined === exitDef.itemOf && undefined === exitDef.getExample) {
       exitDef.outputExample = '===';
     }
   });
