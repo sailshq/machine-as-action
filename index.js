@@ -386,10 +386,16 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         memo[inputCodeName] = req.param(inputCodeName);
       }
 
-      // If a querystring-encoded parameter comes in as "" (empty string) for an input expecting a boolean value,
-      // interpreted that special case as `true`.
+      // If a querystring-encoded parameter comes in as "" (empty string) for an input expecting a boolean
+      // value, interpret that special case as `true`.
       if (inputDef.type === 'boolean' && req.query && req.query[inputCodeName] === '') {
         memo[inputCodeName] = true;
+      }
+
+      // If a querystring-encoded parameter comes in as "" (empty string) for an input expecting a NUMERIC value,
+      // then tolerate that by ignoring the value altogether.
+      if (inputDef.type === 'number' && req.query && req.query[inputCodeName] === '') {
+        delete memo[inputCodeName];
       }
 
       return memo;
