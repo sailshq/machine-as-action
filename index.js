@@ -7,6 +7,7 @@ var Stream = require('stream');
 var _ = require('@sailshq/lodash');
 var Streamifier = require('streamifier');
 var rttc = require('rttc');
+var flaverr = require('flaverr');
 var Machine = require('machine');
 var normalizeResponses = require('./helpers/normalize-responses');
 var getOutputExample = require('./helpers/get-output-example');
@@ -416,9 +417,9 @@ module.exports = function machineAsAction(optsOrMachineDef) {
         // it won't crash the server.
         argins[fileParamName].on('error', function (err){
           console.error('Upstream (file upload: `'+fileParamName+'`) emitted an error:', err);
-        });
-      });
-    }
+        });//æ
+      });//∞
+    }//ﬁ
 
     // Eventually, we may consider implementing support for sourcing inputs from headers.
     //  (if so, we'll likely map as closely as possible to Swagger's syntax --
@@ -746,7 +747,7 @@ module.exports = function machineAsAction(optsOrMachineDef) {
               //  ┴└─└─┘└─┘┴  └─┘┘└┘└─┘└─┘   ┴  ┴ ┴  └─┘  ╚═╝ ╩ ╩ ╩╝╚╝═╩╝╩ ╩╩╚══╩╝
               case '': (function(){
 
-                var outputExample = getOutputExample({ machineDef: wetMachine.getDef(), exitCodeName: exitCodeName });
+                // var outputExample = getOutputExample({ machineDef: wetMachine.getDef(), exitCodeName: exitCodeName });
 
                 // • Undefined output example:  We take that to mean void...mostly (see below.)
                 // (But currently, we just treat it the same as if it is outputExample: '===')
@@ -884,6 +885,43 @@ module.exports = function machineAsAction(optsOrMachineDef) {
 
                 // • Stream (hopefully a Readable one)
                 if (output instanceof Stream) {
+                  output.once('error', function (rawDownloadError){
+                    try {
+                      var err = flaverr({
+                        message: 'Encountered error during file download:  '+rawDownloadError.message,
+                        raw: rawDownloadError
+                      }, rawDownloadError);
+
+                      if (res.finished) {
+                        return res.send();
+                      }
+                      else if (res.headersSent) {
+                        return res.end();
+                      }
+                      else if (_.isFunction(res.serverError)) {
+                        return res.serverError(err);
+                      }
+                      else {
+                        // Log the error.
+                        if (_.isObject(req._sails) && _.isObject(req._sails.log) && _.isFunction(req._sails.log.error)) {
+                          req._sails.log.error(err);
+                        }
+                        else {
+                          console.error(err);
+                        }
+
+                        // Don't send the error in the response in production.
+                        if (IS_RUNNING_IN_PRODUCTION) {
+                          return res.sendStatus(500);
+                        }
+                        // Otherwise, send the error message in the response.
+                        else {
+                          return res.status(500).send(util.inspect(err,{depth:null}));
+                        }
+                      }
+                    } catch (err) { console.error('Consistency violation: Unexpected internal error:',err); }
+                  });//æ
+
                   res.status(responses[exitCodeName].statusCode);
                   return output.pipe(res);
                 }
