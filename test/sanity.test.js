@@ -78,7 +78,7 @@ testRoute('if exit def + compatible output example is specified, actual result s
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -106,7 +106,7 @@ testRoute('if input def + compatible input examples are specified, parameters sh
     },
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -198,7 +198,7 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
     },
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -238,7 +238,7 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //     },
 //     exits: {
 //       success: {
-//         example: 'some string'
+//         outputExample: 'some string'
 //       }
 //     },
 //     fn: function (inputs, exits) {
@@ -265,7 +265,7 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //     },
 //     exits: {
 //       success: {
-//         example: 'some string'
+//         outputExample: 'some string'
 //       }
 //     },
 //     fn: function (inputs, exits) {
@@ -303,7 +303,7 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 //     },
 //     exits: {
 //       success: {
-//         example: 'some string'
+//         outputExample: 'some string'
 //       }
 //     },
 //     fn: function (inputs, exits) {
@@ -335,7 +335,7 @@ testRoute('customizing success exit to use a special status code in the response
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -366,7 +366,7 @@ testRoute('customizing success exit to do a redirect should work', {
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -376,7 +376,7 @@ testRoute('customizing success exit to do a redirect should work', {
   responses: {
     success: {
       responseType: 'redirect',
-      example: 'http://whatever.com',
+      outputExample: 'http://whatever.com',
       statusCode: 301
     }
   }
@@ -400,7 +400,7 @@ testRoute('redirecting should work, even without specifying a status code or out
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -432,7 +432,7 @@ testRoute('customizing success exit to do JSON should work', {
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {
@@ -464,7 +464,7 @@ testRoute('exits other than success should default to status code 500', {
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {}
     },
@@ -494,7 +494,7 @@ testRoute('exits other than success can have their status codes overriden too', 
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {}
     },
@@ -529,7 +529,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {}
     },
@@ -562,7 +562,7 @@ testRoute('ceteris paribus, overriding status code should change response type i
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {}
     },
@@ -593,7 +593,7 @@ testRoute('`redirect` with custom status code', {
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {}
     },
@@ -628,10 +628,10 @@ testRoute('`redirect` with custom status code', {
     inputs: {},
     exits: {
       success: {
-        example: 'some string'
+        outputExample: 'some string'
       },
       whatever: {
-        example: 'some string'
+        outputExample: 'some string'
       }
     },
     fn: function(inputs, exits) {

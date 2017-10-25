@@ -7,6 +7,7 @@
     "lint": "node ./node_modules/eslint/bin/eslint . --max-warnings=0 && echo '✔  Your code looks good.'",
     "custom-tests": "echo \"Running tests...\" && echo && node ./node_modules/mocha/bin/mocha -t 8000 && echo"
   },
+  "main": "lib/machine-as-action.js",
   "keywords": [
     "machine",
     "action",
@@ -22,7 +23,7 @@
   "author": "Mike McNeil",
   "license": "MIT",
   "dependencies": {
-    "flaverr": "^1.2.2",
+    "flaverr": "^1.5.1",
     "@sailshq/lodash": "^3.10.2",
     "machine": "^15.0.0-4",
     "rttc": "^10.0.0-1",
