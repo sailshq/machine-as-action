@@ -45,7 +45,10 @@ module.exports = function buildActionAndSendRequest(app, opts, testResponseFn) {
 
   // Dump out the router and configure the new route.
   var newRoutesMapping = {};
-  newRoutesMapping[opts._testOpts.routeAddress] = asAction(opts);
+  newRoutesMapping[opts._testOpts.routeAddress] = {
+    fn: asAction(opts),
+    skipAssets: false
+  };
   app.router.flush(newRoutesMapping);
 
   // ¬ Should now be able to hit route w/ an appropriate request.
