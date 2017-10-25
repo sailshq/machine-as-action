@@ -1,6 +1,5 @@
 var util = require('util');
 var assert = require('assert');
-var _ = require('@sailshq/lodash');
 var testRoute = require('./util/test-route.util');
 
 
@@ -164,24 +163,15 @@ testRoute('ignore extra parameters', {
     return done(err);
   }
 
-  // NOTE: In the past, we'd assume that the `undefined` passed in to exits.success() inside of `fn` would have
+  // NOTE: Here we'd assume that the `undefined` passed in to exits.success() inside of `fn` would have
   // automatically been coerced into empty string ('').  Then, here, we'd actually expect it never to have been
   // treated that way (and instead just have been left as undefined, from the perspective of our request client).
   // This is only because '' is interpeted as `undefined` in the streaming logic inside the VRI/`sails.request()`.
   // Otherwise, we'd have expected to get empty string ('') here instead.
   // Here's that approach:
   // ```
-  // if (body !== 'OK') {
-  //   return done(new Error('should have gotten `OK` as the response body, but instead got: ' + util.inspect(body)));
-  // }
-  // ```
-  //
-  // BUT!  As it turns out, in machine@v15, automatic coercion is no longer enabled out of the box.
-  // So instead, we check for the other reality:  Since `undefined` will have been left as-is, it ends
-  // up making its way to the Sails VRI/`sails.request()` logic, at which point it gets converted to
-  // `null`.  So then here, we check for that explicitly:
-  if (!_.isNull(body)) {
-    return done(new Error('should have gotten `null` as the response body, but instead got: ' + util.inspect(body)));
+  if (body !== 'OK') {
+    return done(new Error('should have gotten `OK` as the response body, but instead got: ' + util.inspect(body)));
   }
 
   return done();
@@ -217,116 +207,105 @@ testRoute('optional inputs should show up as `undefined` when parameter val is n
 
 
 
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-// Note: for simplicity/clarity, and for consistency w/ blueprints in Sails v1.0,
-// machine-as-action always uses res.serverError(), and does not negotiate param
-// validation errors as bad requests (4xx).  Over time, if it is helpful, we can change
-// this behavior to have machine-as-action perform its own RTTC validation and send
-// a 400 response in this scenario.  (We could almost also inspect the error code, but
-// since it is not unlikely that the code inside the action uses _other_ machines, it
-// wouldn't be 100% safe to do that.)
-// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+testRoute('when no param val is specified for required input, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi',
+        required: true
+      }
+    },
+    exits: {
+      success: {
+        outputExample: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
 
 
-// testRoute('when no param val is specified for required input, should respond w/ bad request error', {
-//   machine: {
-//     inputs: {
-//       x: {
-//         example: 'hi',
-//         required: true
-//       }
-//     },
-//     exits: {
-//       success: {
-//         outputExample: 'some string'
-//       }
-//     },
-//     fn: function (inputs, exits) {
-//       return exits.success();
-//     }
-//   },
-// }, function (err, resp, body, done){
-//   if (err) {
-//     if (err.status !== 400) {
-//       return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
-//     }
-//     return done();
-//   }
-//   return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
-// });
+testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi'
+      }
+    },
+    exits: {
+      success: {
+        outputExample: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+  _testOpts: {
+    routeAddress: 'GET /something',
+    method: 'GET',
+    path: '/something',
+    params: {
+      x: {
+        foo: [[4]]
+      }
+    }
+  },
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
 
 
-// testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
-//   machine: {
-//     inputs: {
-//       x: {
-//         example: 'hi'
-//       }
-//     },
-//     exits: {
-//       success: {
-//         outputExample: 'some string'
-//       }
-//     },
-//     fn: function (inputs, exits) {
-//       return exits.success();
-//     }
-//   },
-//   _testOpts: {
-//     routeAddress: 'GET /something',
-//     method: 'GET',
-//     path: '/something',
-//     params: {
-//       x: {
-//         foo: [[4]]
-//       }
-//     }
-//   },
-// }, function (err, resp, body, done){
-//   if (err) {
-//     if (err.status !== 400) {
-//       return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
-//     }
-//     return done();
-//   }
-//   return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
-// });
-
-
-// testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
-//   machine: {
-//     inputs: {
-//       x: {
-//         example: 'hi',
-//         required: true
-//       }
-//     },
-//     exits: {
-//       success: {
-//         outputExample: 'some string'
-//       }
-//     },
-//     fn: function (inputs, exits) {
-//       return exits.success();
-//     }
-//   },
-//   _testOpts: {
-//     routeAddress: 'GET /something',
-//     method: 'GET',
-//     path: '/something',
-//     params: {
-//       x: [4, 3]
-//     }
-//   },
-// }, function (err, resp, body, done){
-//   if (err) {
-//     if (err.status !== 400) {
-//       return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
-//     }
-//     return done();
-//   }
-//   return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
-// });
+testRoute('when param val of incorrect type is specified, should respond w/ bad request error', {
+  machine: {
+    inputs: {
+      x: {
+        example: 'hi',
+        required: true
+      }
+    },
+    exits: {
+      success: {
+        outputExample: 'some string'
+      }
+    },
+    fn: function (inputs, exits) {
+      return exits.success();
+    }
+  },
+  _testOpts: {
+    routeAddress: 'GET /something',
+    method: 'GET',
+    path: '/something',
+    params: {
+      x: [4, 3]
+    }
+  },
+}, function (err, resp, body, done){
+  if (err) {
+    if (err.status !== 400) {
+      return done(new Error('Should have responded with a 400 status code (instead got '+err.status+')'));
+    }
+    return done();
+  }
+  return done(new Error('Should have responded with a bad request error! Instead got status code 200.'));
+});
 
 
 
