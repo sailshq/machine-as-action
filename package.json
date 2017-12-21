@@ -26,7 +26,7 @@
     "flaverr": "^1.5.1",
     "@sailshq/lodash": "^3.10.2",
     "machine": "^15.0.0-19",
-    "rttc": "^10.0.0-1",
+    "rttc": "^10.0.0-4",
     "streamifier": "0.1.1"
   },
   "devDependencies": {
