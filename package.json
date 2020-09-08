@@ -1,6 +1,6 @@
 {
   "name": "machine-as-action",
-  "version": "10.3.0",
+  "version": "10.3.1",
   "description": "Run a machine from an HTTP or WebSocket request.",
   "scripts": {
     "test": "npm run lint && npm run custom-tests && echo 'Done.'",
